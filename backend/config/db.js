@@ -44,6 +44,20 @@ async function initDatabase() {
   const activePool = await createPool();
 
   await activePool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(120) NOT NULL,
+      email VARCHAR(120) NOT NULL,
+      phone VARCHAR(25) NOT NULL DEFAULT '',
+      password VARCHAR(255) NOT NULL,
+      role ENUM('admin', 'landlord', 'renter') NOT NULL DEFAULT 'renter',
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uniq_users_email (email)
+    )
+  `);
+
+  await activePool.query(`
     CREATE TABLE IF NOT EXISTS properties (
       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
       landlord_id INT NOT NULL,
@@ -79,6 +93,28 @@ async function initDatabase() {
       INDEX idx_unlock_renter_status (renter_id, status),
       INDEX idx_unlock_property_status (property_id, status)
     )
+  `);
+
+  await activePool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS phone VARCHAR(25) NOT NULL DEFAULT '' AFTER email
+  `);
+
+  await activePool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER role
+  `);
+
+  await activePool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at
+  `);
+
+  await activePool.query(`
+    ALTER TABLE users
+    MODIFY COLUMN email VARCHAR(120) NOT NULL,
+    MODIFY COLUMN phone VARCHAR(25) NOT NULL DEFAULT '',
+    MODIFY COLUMN role ENUM('admin', 'landlord', 'renter') NOT NULL DEFAULT 'renter'
   `);
 
   await activePool.query(`

@@ -98,6 +98,16 @@ textarea {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.btn.danger {
+  background: rgba(183, 66, 50, 0.14);
+  color: var(--danger);
+  border: 1px solid rgba(183, 66, 50, 0.2);
+}
+
+.btn.danger:hover {
+  background: rgba(183, 66, 50, 0.2);
+}
+
 .icon-btn {
   border: 0;
   background: transparent;
@@ -239,6 +249,11 @@ textarea {
 
 .split-layout {
   grid-template-columns: 1.2fr 1fr;
+  align-items: start;
+}
+
+.admin-management-grid {
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
   align-items: start;
 }
 
@@ -457,8 +472,28 @@ textarea {
   color: var(--danger);
 }
 
+.pill.neutral {
+  background: rgba(33, 20, 7, 0.08);
+  color: var(--muted);
+}
+
 .stat-card {
   padding: 1.25rem;
+}
+
+.admin-user-row {
+  gap: 1.25rem;
+}
+
+.admin-user-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.admin-user-actions {
+  align-self: stretch;
 }
 
 .modal {
@@ -521,6 +556,7 @@ textarea {
 
 @media (max-width: 900px) {
   .split-layout,
+  .admin-management-grid,
   .hero-search,
   .dashboard-header,
   .listing-row {
