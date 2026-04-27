@@ -3,7 +3,8 @@ const {
   createProperty,
   getMyProperties,
   getProperties,
-  markRented
+  markRented,
+  updatePropertyStatus
 } = require("../controllers/propertyController");
 const { authorizeRoles, optionalAuth, verifyToken } = require("../middleware/auth");
 const upload = require("../middleware/upload");
@@ -21,5 +22,6 @@ router.post(
   createProperty
 );
 router.put("/:id/rented", verifyToken, authorizeRoles("landlord", "admin"), markRented);
+router.put("/:id/status", verifyToken, authorizeRoles("landlord", "admin"), updatePropertyStatus);
 
 module.exports = router;

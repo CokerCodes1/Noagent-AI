@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import api, { extractErrorMessage } from "../api/axios.js";
+import { getContactPersonLabel } from "../utils/propertyListing.js";
 
 export default function PaymentSuccess() {
   const navigate = useNavigate();
@@ -21,7 +22,9 @@ export default function PaymentSuccess() {
         const response = await api.get(`/payment/verify/${reference}`);
 
         if (response.data.success) {
-          toast.success("Payment verified. Contact details are now unlocked.");
+          const contactLabel =
+            response.data.contact_label || getContactPersonLabel(response.data.listing_purpose);
+          toast.success(`Payment verified. ${contactLabel} phone and WhatsApp are now unlocked.`);
           navigate("/renter", { replace: true });
           return;
         }

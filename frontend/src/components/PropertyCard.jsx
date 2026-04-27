@@ -3,6 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import api, { BACKEND_URL, extractErrorMessage } from "../api/axios.js";
 import VideoModal from "./VideoModal.jsx";
+import {
+  formatNaira,
+  getContactFeeNaira,
+  getContactPersonLabel,
+  getListingPurposeLabel
+} from "../utils/propertyListing.js";
 
 export default function PropertyCard({ property, onPaymentStateChange }) {
   const navigate = useNavigate();
@@ -13,6 +19,10 @@ export default function PropertyCard({ property, onPaymentStateChange }) {
   const images = property.images || [];
   const currentImage = images[currentImageIndex];
   const isUnlocked = property.is_unlocked;
+  const contactLabel = property.contact_label || getContactPersonLabel(property.listing_purpose);
+  const listingPurposeLabel =
+    property.listing_purpose_label || getListingPurposeLabel(property.listing_purpose);
+  const contactFee = getContactFeeNaira(property);
 
   async function handlePayment() {
     const token = localStorage.getItem("token");
@@ -26,7 +36,7 @@ export default function PropertyCard({ property, onPaymentStateChange }) {
 
     try {
       const response = await api.post("/payment/initialize", {
-        property_id: property.id
+        property_id: property.id,
       });
 
       if (response.data.alreadyUnlocked) {
@@ -67,7 +77,9 @@ export default function PropertyCard({ property, onPaymentStateChange }) {
               <button
                 key={`${property.id}-${image}`}
                 type="button"
-                className={index === currentImageIndex ? "thumb active" : "thumb"}
+                className={
+                  index === currentImageIndex ? "thumb active" : "thumb"
+                }
                 onClick={() => setCurrentImageIndex(index)}
               >
                 <img
@@ -89,17 +101,28 @@ export default function PropertyCard({ property, onPaymentStateChange }) {
           <strong>N{Number(property.price).toLocaleString()}</strong>
         </div>
 
+        <div className="listing-tag-row">
+          <span className={`pill ${property.listing_purpose || "rent"}`}>{listingPurposeLabel}</span>
+          <p className="property-fee-note">
+            Contact {contactLabel} fee: {formatNaira(contactFee)}
+          </p>
+        </div>
+
         <p className="property-description">{property.description}</p>
 
         <div className="button-row">
-          <button className="btn secondary" type="button" onClick={() => setShowVideo(true)}>
+          <button
+            className="btn secondary"
+            type="button"
+            onClick={() => setShowVideo(true)}
+          >
             Watch Video
           </button>
 
           {isUnlocked ? (
             <>
               <a className="btn primary" href={`tel:${property.phone}`}>
-                Call Landlord
+                Call {contactLabel}
               </a>
               <a
                 className="btn"
@@ -107,7 +130,7 @@ export default function PropertyCard({ property, onPaymentStateChange }) {
                 target="_blank"
                 rel="noreferrer"
               >
-                WhatsApp
+                WhatsApp {contactLabel}
               </a>
             </>
           ) : (
@@ -117,7 +140,7 @@ export default function PropertyCard({ property, onPaymentStateChange }) {
               onClick={handlePayment}
               disabled={paying}
             >
-              {paying ? "Redirecting..." : "Pay N200 to Unlock Contact"}
+              {paying ? "Redirecting..." : `Contact ${contactLabel}`}
             </button>
           )}
         </div>

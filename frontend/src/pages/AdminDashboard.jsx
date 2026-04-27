@@ -1,29 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Navigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import api, { extractErrorMessage } from "../api/axios.js";
+import AdminTechniciansSection from "../components/admin/AdminTechniciansSection.jsx";
+import AdminOverviewSection from "../components/admin/AdminOverviewSection.jsx";
+import AdminPropertiesSection from "../components/admin/AdminPropertiesSection.jsx";
+import AdminRevenueSection from "../components/admin/AdminRevenueSection.jsx";
+import AdminSidebar from "../components/admin/AdminSidebar.jsx";
+import AdminTestimonialsSection from "../components/admin/AdminTestimonialsSection.jsx";
+import AdminUsersSection from "../components/admin/AdminUsersSection.jsx";
+import {
+  adminSections,
+  emptyManagedPropertyForm,
+  emptyManagedUserForm,
+  emptyOverview,
+  getCurrentSection,
+  roleLabel
+} from "../components/admin/adminConfig.js";
+import { emptyTechnicianProfileForm } from "../components/technicians/technicianConfig.js";
 import DashboardHeader from "../components/DashboardHeader.jsx";
 import { clearAuthSession, getStoredUser } from "../utils/session.js";
-
-const emptyManagedUserForm = {
-  name: "",
-  email: "",
-  phone: "",
-  password: "",
-  role: "landlord"
-};
-
-const emptyOverview = {
-  stats: {
-    users: 0,
-    landlords: 0,
-    renters: 0,
-    properties: 0,
-    availableProperties: 0,
-    rentedProperties: 0,
-    revenue: 0
-  },
-  properties: []
-};
+import { resolveTechnicianCategoryOption } from "../utils/technicianCategories.js";
 
 function handleDashboardRequestError(requestError, setError) {
   const message = extractErrorMessage(requestError);
@@ -36,44 +33,72 @@ function handleDashboardRequestError(requestError, setError) {
 }
 
 export default function AdminDashboard() {
+  const location = useLocation();
+  const user = getStoredUser();
+  const activeSection = getCurrentSection(location.pathname);
+  const propertyImagesInputRef = useRef(null);
+  const propertyVideoInputRef = useRef(null);
+  const technicianImagesInputRef = useRef(null);
+  const technicianVideoInputRef = useRef(null);
   const [overview, setOverview] = useState(emptyOverview);
   const [managedUsers, setManagedUsers] = useState([]);
-  const [overviewLoading, setOverviewLoading] = useState(true);
+  const [managedProperties, setManagedProperties] = useState([]);
+  const [managedTechnicians, setManagedTechnicians] = useState([]);
+  const [revenueSummary, setRevenueSummary] = useState({
+    successfulTransactions: 0,
+    revenue: 0
+  });
+  const [transactions, setTransactions] = useState([]);
+  const [testimonials, setTestimonials] = useState([]);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
-  const [overviewError, setOverviewError] = useState("");
+  const [propertiesLoading, setPropertiesLoading] = useState(true);
+  const [techniciansLoading, setTechniciansLoading] = useState(true);
+  const [revenueLoading, setRevenueLoading] = useState(true);
+  const [testimonialsLoading, setTestimonialsLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState("");
   const [usersError, setUsersError] = useState("");
+  const [propertiesError, setPropertiesError] = useState("");
+  const [techniciansError, setTechniciansError] = useState("");
+  const [revenueError, setRevenueError] = useState("");
+  const [testimonialsError, setTestimonialsError] = useState("");
   const [managedUserForm, setManagedUserForm] = useState(emptyManagedUserForm);
   const [editingUserId, setEditingUserId] = useState(null);
-  const [filterRole, setFilterRole] = useState("all");
   const [submittingUser, setSubmittingUser] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState(null);
+  const [filterRole, setFilterRole] = useState("all");
+  const [managedPropertyForm, setManagedPropertyForm] = useState(emptyManagedPropertyForm);
+  const [editingPropertyId, setEditingPropertyId] = useState(null);
+  const [submittingProperty, setSubmittingProperty] = useState(false);
+  const [deletingPropertyId, setDeletingPropertyId] = useState(null);
+  const [propertyFilter, setPropertyFilter] = useState("all");
+  const [technicianForm, setTechnicianForm] = useState(emptyTechnicianProfileForm);
+  const [editingTechnicianId, setEditingTechnicianId] = useState(null);
+  const [submittingTechnician, setSubmittingTechnician] = useState(false);
+  const [deletingTechnicianId, setDeletingTechnicianId] = useState(null);
+  const [filterCategory, setFilterCategory] = useState("all");
   const [refreshToken, setRefreshToken] = useState(0);
-  const user = getStoredUser();
-  const isEditing = Boolean(editingUserId);
-
-  function updateField(field, value) {
-    setManagedUserForm((currentForm) => ({
-      ...currentForm,
-      [field]: value
-    }));
-  }
-
-  function resetManagedUserForm() {
-    setManagedUserForm({ ...emptyManagedUserForm });
-    setEditingUserId(null);
-  }
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadDashboardData() {
-      setOverviewLoading(true);
+    async function loadAdminData() {
+      setDashboardLoading(true);
       setUsersLoading(true);
+      setPropertiesLoading(true);
+      setTechniciansLoading(true);
+      setRevenueLoading(true);
+      setTestimonialsLoading(true);
 
-      const [overviewResult, usersResult] = await Promise.allSettled([
-        api.get("/admin/overview"),
-        api.get("/admin/users")
-      ]);
+      const [overviewResult, usersResult, propertiesResult, techniciansResult, revenueResult, testimonialsResult] =
+        await Promise.allSettled([
+          api.get("/admin/overview"),
+          api.get("/admin/users"),
+          api.get("/admin/properties"),
+          api.get("/admin/technicians"),
+          api.get("/admin/revenue"),
+          api.get("/admin/testimonials")
+        ]);
 
       if (!isMounted) {
         return;
@@ -81,9 +106,9 @@ export default function AdminDashboard() {
 
       if (overviewResult.status === "fulfilled") {
         setOverview(overviewResult.value.data);
-        setOverviewError("");
+        setDashboardError("");
       } else {
-        handleDashboardRequestError(overviewResult.reason, setOverviewError);
+        handleDashboardRequestError(overviewResult.reason, setDashboardError);
       }
 
       if (usersResult.status === "fulfilled") {
@@ -93,48 +118,130 @@ export default function AdminDashboard() {
         handleDashboardRequestError(usersResult.reason, setUsersError);
       }
 
-      setOverviewLoading(false);
+      if (propertiesResult.status === "fulfilled") {
+        setManagedProperties(propertiesResult.value.data);
+        setPropertiesError("");
+      } else {
+        handleDashboardRequestError(propertiesResult.reason, setPropertiesError);
+      }
+
+      if (techniciansResult.status === "fulfilled") {
+        setManagedTechnicians(techniciansResult.value.data);
+        setTechniciansError("");
+      } else {
+        handleDashboardRequestError(techniciansResult.reason, setTechniciansError);
+      }
+
+      if (revenueResult.status === "fulfilled") {
+        setRevenueSummary(revenueResult.value.data.summary);
+        setTransactions(revenueResult.value.data.transactions);
+        setRevenueError("");
+      } else {
+        handleDashboardRequestError(revenueResult.reason, setRevenueError);
+      }
+
+      if (testimonialsResult.status === "fulfilled") {
+        setTestimonials(testimonialsResult.value.data.testimonials);
+        setTestimonialsError("");
+      } else {
+        handleDashboardRequestError(testimonialsResult.reason, setTestimonialsError);
+      }
+
+      setDashboardLoading(false);
       setUsersLoading(false);
+      setPropertiesLoading(false);
+      setTechniciansLoading(false);
+      setRevenueLoading(false);
+      setTestimonialsLoading(false);
     }
 
-    loadDashboardData();
+    loadAdminData();
 
     return () => {
       isMounted = false;
     };
   }, [refreshToken]);
 
+  if (!activeSection) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  function refreshAdminData() {
+    setRefreshToken((currentValue) => currentValue + 1);
+  }
+
+  function updateUserField(field, value) {
+    setManagedUserForm((currentForm) => ({ ...currentForm, [field]: value }));
+  }
+
+  function resetManagedUserForm() {
+    setManagedUserForm({ ...emptyManagedUserForm });
+    setEditingUserId(null);
+  }
+
+  function updatePropertyField(field, value) {
+    setManagedPropertyForm((currentForm) => {
+      if (field === "listing_purpose") {
+        return {
+          ...currentForm,
+          [field]: value,
+          status:
+            value === "sale"
+              ? currentForm.status === "rented"
+                ? "available"
+                : currentForm.status
+              : currentForm.status === "sold"
+                ? "available"
+                : currentForm.status
+        };
+      }
+
+      return { ...currentForm, [field]: value };
+    });
+  }
+
+  function resetManagedPropertyForm() {
+    setManagedPropertyForm({ ...emptyManagedPropertyForm });
+    setEditingPropertyId(null);
+    if (propertyImagesInputRef.current) propertyImagesInputRef.current.value = "";
+    if (propertyVideoInputRef.current) propertyVideoInputRef.current.value = "";
+  }
+
+  function updateTechnicianField(field, value) {
+    setTechnicianForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+      ...(field === "category" && value !== "Others"
+        ? { custom_category: "" }
+        : {})
+    }));
+  }
+
+  function resetTechnicianForm() {
+    setTechnicianForm({ ...emptyTechnicianProfileForm });
+    setEditingTechnicianId(null);
+    if (technicianImagesInputRef.current) technicianImagesInputRef.current.value = "";
+    if (technicianVideoInputRef.current) technicianVideoInputRef.current.value = "";
+  }
+
   async function handleManagedUserSubmit(event) {
     event.preventDefault();
     setSubmittingUser(true);
 
-    const payload = {
-      name: managedUserForm.name,
-      email: managedUserForm.email,
-      phone: managedUserForm.phone,
-      password: managedUserForm.password,
-      role: managedUserForm.role
-    };
-
     try {
-      if (isEditing) {
+      const payload = { ...managedUserForm };
+      if (editingUserId) {
         await api.put(`/admin/users/${editingUserId}`, payload);
         toast.success("User updated successfully.");
       } else {
         await api.post("/admin/users", payload);
-        toast.success(
-          `${managedUserForm.role === "landlord" ? "Landlord" : "Renter"} created successfully.`
-        );
+        toast.success(`${roleLabel(managedUserForm.role)} created successfully.`);
       }
-
       resetManagedUserForm();
-      setRefreshToken((currentValue) => currentValue + 1);
+      refreshAdminData();
     } catch (requestError) {
       toast.error(extractErrorMessage(requestError));
-
-      if (requestError.response?.status === 401) {
-        clearAuthSession();
-      }
+      if (requestError.response?.status === 401) clearAuthSession();
     } finally {
       setSubmittingUser(false);
     }
@@ -152,318 +259,345 @@ export default function AdminDashboard() {
   }
 
   async function handleDeleteUser(managedUser) {
-    const roleLabel = managedUser.role === "landlord" ? "landlord" : "renter";
+    if (managedUser.is_protected) {
+      toast.error("This reserved admin account cannot be deleted.");
+      return;
+    }
+
     const propertyNotice =
       managedUser.properties_count > 0
         ? ` This will also remove ${managedUser.properties_count} linked property listing${managedUser.properties_count === 1 ? "" : "s"}.`
         : "";
     const unlockNotice =
       managedUser.unlocks_count > 0
-        ? ` ${managedUser.unlocks_count} contact unlock record${managedUser.unlocks_count === 1 ? "" : "s"} will be removed as well.`
+        ? ` ${managedUser.unlocks_count} successful transaction record${managedUser.unlocks_count === 1 ? "" : "s"} will be removed too.`
         : "";
-
     const confirmed = window.confirm(
-      `Delete ${managedUser.name} (${roleLabel})?${propertyNotice}${unlockNotice}`
+      `Delete ${managedUser.name} (${managedUser.role})?${propertyNotice}${unlockNotice}`
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     setDeletingUserId(managedUser.id);
-
     try {
       await api.delete(`/admin/users/${managedUser.id}`);
       toast.success(`${managedUser.name} deleted successfully.`);
-
-      if (editingUserId === managedUser.id) {
-        resetManagedUserForm();
-      }
-
-      setRefreshToken((currentValue) => currentValue + 1);
+      if (editingUserId === managedUser.id) resetManagedUserForm();
+      refreshAdminData();
     } catch (requestError) {
       toast.error(extractErrorMessage(requestError));
-
-      if (requestError.response?.status === 401) {
-        clearAuthSession();
-      }
+      if (requestError.response?.status === 401) clearAuthSession();
     } finally {
       setDeletingUserId(null);
     }
   }
 
-  const filteredUsers = managedUsers.filter((managedUser) => {
-    if (filterRole === "all") {
-      return true;
+  async function handleManagedPropertySubmit(event) {
+    event.preventDefault();
+    const selectedImages = propertyImagesInputRef.current?.files || [];
+    const selectedVideo = propertyVideoInputRef.current?.files?.[0] || null;
+
+    if (!editingPropertyId && selectedImages.length === 0) {
+      toast.error("Please upload at least one property image.");
+      return;
     }
 
-    return managedUser.role === filterRole;
-  });
+    if (!editingPropertyId && !selectedVideo) {
+      toast.error("Please upload a property video.");
+      return;
+    }
+
+    if (selectedImages.length > 5) {
+      toast.error("You can upload a maximum of 5 images.");
+      return;
+    }
+
+    setSubmittingProperty(true);
+
+    try {
+      const formData = new FormData();
+      Object.entries(managedPropertyForm).forEach(([key, value]) => formData.append(key, value));
+      Array.from(selectedImages).forEach((file) => formData.append("images", file));
+      if (selectedVideo) formData.append("video", selectedVideo);
+
+      const config = { headers: { "Content-Type": "multipart/form-data" } };
+      if (editingPropertyId) {
+        await api.put(`/admin/properties/${editingPropertyId}`, formData, config);
+        toast.success("Property updated successfully.");
+      } else {
+        await api.post("/admin/properties", formData, config);
+        toast.success("Property created successfully.");
+      }
+
+      resetManagedPropertyForm();
+      refreshAdminData();
+    } catch (requestError) {
+      toast.error(extractErrorMessage(requestError));
+      if (requestError.response?.status === 401) clearAuthSession();
+    } finally {
+      setSubmittingProperty(false);
+    }
+  }
+
+  function handleEditProperty(property) {
+    setEditingPropertyId(property.id);
+    setManagedPropertyForm({
+      landlord_id: String(property.landlord_id),
+      type: property.type,
+      listing_purpose: property.listing_purpose || "rent",
+      description: property.description,
+      location: property.location,
+      price: String(property.price),
+      phone: property.phone || "",
+      status: property.status || "available"
+    });
+    if (propertyImagesInputRef.current) propertyImagesInputRef.current.value = "";
+    if (propertyVideoInputRef.current) propertyVideoInputRef.current.value = "";
+  }
+
+  async function handleDeleteProperty(property) {
+    const confirmed = window.confirm(
+      `Delete ${property.type} in ${property.location}? This will also remove related unlock records.`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingPropertyId(property.id);
+    try {
+      await api.delete(`/admin/properties/${property.id}`);
+      toast.success("Property deleted successfully.");
+      if (editingPropertyId === property.id) resetManagedPropertyForm();
+      refreshAdminData();
+    } catch (requestError) {
+      toast.error(extractErrorMessage(requestError));
+      if (requestError.response?.status === 401) clearAuthSession();
+    } finally {
+      setDeletingPropertyId(null);
+    }
+  }
+
+  async function handleTechnicianSubmit(event) {
+    event.preventDefault();
+    const selectedImages = technicianImagesInputRef.current?.files || [];
+    const selectedVideo = technicianVideoInputRef.current?.files?.[0] || null;
+
+    if (selectedImages.length > 5) {
+      toast.error("You can upload a maximum of 5 images.");
+      return;
+    }
+
+    setSubmittingTechnician(true);
+
+    try {
+      const formData = new FormData();
+      const fields = [
+        "email",
+        "password",
+        "category",
+        "custom_category",
+        "name",
+        "description",
+        "office_address",
+        "phone",
+        "whatsapp",
+        "website",
+        "jobs_completed",
+        "total_earnings"
+      ];
+
+      fields.forEach((field) => formData.append(field, technicianForm[field] ?? ""));
+      Array.from(selectedImages).forEach((file) => formData.append("images", file));
+      if (selectedVideo) formData.append("video", selectedVideo);
+
+      const config = { headers: { "Content-Type": "multipart/form-data" } };
+      if (editingTechnicianId) {
+        await api.put(`/admin/technicians/${editingTechnicianId}`, formData, config);
+        toast.success("Technician updated successfully.");
+      } else {
+        await api.post("/admin/technicians", formData, config);
+        toast.success("Technician created successfully.");
+      }
+
+      resetTechnicianForm();
+      refreshAdminData();
+    } catch (requestError) {
+      toast.error(extractErrorMessage(requestError));
+      if (requestError.response?.status === 401) clearAuthSession();
+    } finally {
+      setSubmittingTechnician(false);
+    }
+  }
+
+  function handleEditTechnician(technician) {
+    setEditingTechnicianId(technician.id);
+    setTechnicianForm({
+      ...emptyTechnicianProfileForm,
+      email: technician.email || "",
+      password: "",
+      category: technician.category || "",
+      custom_category:
+        resolveTechnicianCategoryOption(technician.category) === "Others"
+          ? technician.category
+          : "",
+      name: technician.name || "",
+      description: technician.description || "",
+      office_address: technician.office_address || "",
+      phone: technician.phone || "",
+      whatsapp: technician.whatsapp || "",
+      website: technician.website || "",
+      video_url: technician.video_url || "",
+      jobs_completed: String(technician.jobs_completed ?? 0),
+      total_earnings: String(technician.total_earnings ?? 0),
+      existing_images: Array.isArray(technician.images) ? technician.images : [],
+      current_video_url: technician.video_url || ""
+    });
+    if (technicianImagesInputRef.current) technicianImagesInputRef.current.value = "";
+    if (technicianVideoInputRef.current) technicianVideoInputRef.current.value = "";
+  }
+
+  async function handleDeleteTechnician(technician) {
+    const confirmed = window.confirm(
+      `Delete ${technician.name}? This will remove the technician account and marketplace profile.`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingTechnicianId(technician.id);
+    try {
+      await api.delete(`/admin/technicians/${technician.id}`);
+      toast.success(`${technician.name} deleted successfully.`);
+      if (editingTechnicianId === technician.id) resetTechnicianForm();
+      refreshAdminData();
+    } catch (requestError) {
+      toast.error(extractErrorMessage(requestError));
+      if (requestError.response?.status === 401) clearAuthSession();
+    } finally {
+      setDeletingTechnicianId(null);
+    }
+  }
+
+  const filteredUsers = managedUsers.filter((managedUser) =>
+    filterRole === "all" ? true : managedUser.role === filterRole
+  );
+  const filteredProperties = managedProperties.filter((property) =>
+    propertyFilter === "all" ? true : property.status === propertyFilter
+  );
+  const landlords = managedUsers.filter((managedUser) => managedUser.role === "landlord");
+  const section = adminSections[activeSection];
 
   return (
     <div className="dashboard-shell">
-      <section className="dashboard-section">
-        <DashboardHeader
-          title={`Operations overview for ${user?.name || "Admin"}`}
-          subtitle="Monitor users, listings, and revenue from one place, then manage landlords and renters without leaving the dashboard."
-        />
+      <div className="admin-shell">
+        <AdminSidebar overview={overview} />
 
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Admin Dashboard</p>
-            <h1>Operations overview for {user?.name || "Admin"}</h1>
-          </div>
-          <p>Visibility across users, listings, revenue, and account management.</p>
-        </div>
+        <main className="admin-content">
+          <DashboardHeader
+            title={`${section.title} for ${user?.name || "Admin"}`}
+            subtitle={section.subtitle}
+          />
 
-        {overviewError ? <div className="status-card error">{overviewError}</div> : null}
-
-        {overviewLoading ? (
-          <div className="status-card">Loading admin overview...</div>
-        ) : (
-          <>
-            <div className="grid stats-grid">
-              <div className="card stat-card">
-                <p>Users</p>
-                <strong>{overview.stats.users}</strong>
+          <section className="dashboard-section admin-content-section">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Admin Workspace</p>
+                <h1>{section.title}</h1>
               </div>
-              <div className="card stat-card">
-                <p>Landlords</p>
-                <strong>{overview.stats.landlords}</strong>
-              </div>
-              <div className="card stat-card">
-                <p>Renters</p>
-                <strong>{overview.stats.renters}</strong>
-              </div>
-              <div className="card stat-card">
-                <p>Total Properties</p>
-                <strong>{overview.stats.properties}</strong>
-              </div>
-              <div className="card stat-card">
-                <p>Available</p>
-                <strong>{overview.stats.availableProperties}</strong>
-              </div>
-              <div className="card stat-card">
-                <p>Rented</p>
-                <strong>{overview.stats.rentedProperties}</strong>
-              </div>
-              <div className="card stat-card">
-                <p>Revenue</p>
-                <strong>N{Number(overview.stats.revenue / 100).toLocaleString()}</strong>
-              </div>
+              <p>{section.subtitle}</p>
             </div>
 
-            <div className="grid admin-management-grid">
-              <div className="section-card">
-                <div className="section-heading">
-                  <div>
-                    <p className="eyebrow">User Management</p>
-                    <h2>{isEditing ? "Edit landlord or renter" : "Create landlord or renter"}</h2>
-                  </div>
-                </div>
+            {activeSection === "dashboard" ? (
+              <AdminOverviewSection
+                dashboardError={dashboardError}
+                dashboardLoading={dashboardLoading}
+                overview={overview}
+              />
+            ) : null}
 
-                <p className="section-copy">
-                  Create new landlord or renter accounts, update their details, and optionally
-                  reset their password from here.
-                </p>
+            {activeSection === "users" ? (
+              <AdminUsersSection
+                currentUserId={user?.id}
+                deletingUserId={deletingUserId}
+                filterRole={filterRole}
+                filteredUsers={filteredUsers}
+                handleDeleteUser={handleDeleteUser}
+                handleEditUser={handleEditUser}
+                handleManagedUserSubmit={handleManagedUserSubmit}
+                isEditingUser={Boolean(editingUserId)}
+                managedUserForm={managedUserForm}
+                resetManagedUserForm={resetManagedUserForm}
+                setFilterRole={setFilterRole}
+                submittingUser={submittingUser}
+                updateUserField={updateUserField}
+                usersError={usersError}
+                usersLoading={usersLoading}
+                usersTotal={managedUsers.length}
+              />
+            ) : null}
 
-                <form className="property-form" onSubmit={handleManagedUserSubmit}>
-                  <div className="form-grid">
-                    <label>
-                      <span>Full name</span>
-                      <input
-                        value={managedUserForm.name}
-                        onChange={(event) => updateField("name", event.target.value)}
-                        placeholder="Jane Doe"
-                        required
-                      />
-                    </label>
+            {activeSection === "properties" ? (
+              <AdminPropertiesSection
+                deletingPropertyId={deletingPropertyId}
+                filteredProperties={filteredProperties}
+                handleDeleteProperty={handleDeleteProperty}
+                handleEditProperty={handleEditProperty}
+                handleManagedPropertySubmit={handleManagedPropertySubmit}
+                isEditingProperty={Boolean(editingPropertyId)}
+                landlords={landlords}
+                managedProperties={managedProperties}
+                managedPropertyForm={managedPropertyForm}
+                propertiesError={propertiesError}
+                propertiesLoading={propertiesLoading}
+                propertyFilter={propertyFilter}
+                propertyImagesInputRef={propertyImagesInputRef}
+                propertyVideoInputRef={propertyVideoInputRef}
+                resetManagedPropertyForm={resetManagedPropertyForm}
+                setPropertyFilter={setPropertyFilter}
+                submittingProperty={submittingProperty}
+                updatePropertyField={updatePropertyField}
+              />
+            ) : null}
 
-                    <label>
-                      <span>Email</span>
-                      <input
-                        type="email"
-                        value={managedUserForm.email}
-                        onChange={(event) => updateField("email", event.target.value)}
-                        placeholder="jane@example.com"
-                        required
-                      />
-                    </label>
+            {activeSection === "technicians" ? (
+              <AdminTechniciansSection
+                deletingTechnicianId={deletingTechnicianId}
+                editingTechnicianId={editingTechnicianId}
+                filterCategory={filterCategory}
+                handleDeleteTechnician={handleDeleteTechnician}
+                handleEditTechnician={handleEditTechnician}
+                handleSubmit={handleTechnicianSubmit}
+                imagesInputRef={technicianImagesInputRef}
+                resetForm={resetTechnicianForm}
+                setFilterCategory={setFilterCategory}
+                submittingTechnician={submittingTechnician}
+                technicianForm={technicianForm}
+                technicians={managedTechnicians}
+                techniciansError={techniciansError}
+                techniciansLoading={techniciansLoading}
+                updateTechnicianField={updateTechnicianField}
+                videoInputRef={technicianVideoInputRef}
+              />
+            ) : null}
 
-                    <label>
-                      <span>Phone</span>
-                      <input
-                        value={managedUserForm.phone}
-                        onChange={(event) => updateField("phone", event.target.value)}
-                        placeholder="08012345678"
-                      />
-                    </label>
+            {activeSection === "testimonials" ? (
+              <AdminTestimonialsSection
+                testimonials={testimonials}
+                testimonialsError={testimonialsError}
+                testimonialsLoading={testimonialsLoading}
+                refreshAdminData={refreshAdminData}
+              />
+            ) : null}
 
-                    <label>
-                      <span>Role</span>
-                      <select
-                        value={managedUserForm.role}
-                        onChange={(event) => updateField("role", event.target.value)}
-                      >
-                        <option value="landlord">Landlord</option>
-                        <option value="renter">Renter</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  <label>
-                    <span>{isEditing ? "New password" : "Password"}</span>
-                    <input
-                      type="password"
-                      value={managedUserForm.password}
-                      onChange={(event) => updateField("password", event.target.value)}
-                      placeholder={
-                        isEditing
-                          ? "Leave blank to keep the current password"
-                          : "Minimum 6 characters"
-                      }
-                      required={!isEditing}
-                    />
-                  </label>
-
-                  <div className="button-row">
-                    <button className="btn primary" type="submit" disabled={submittingUser}>
-                      {submittingUser
-                        ? isEditing
-                          ? "Saving..."
-                          : "Creating..."
-                        : isEditing
-                          ? "Save Changes"
-                          : "Create User"}
-                    </button>
-
-                    {isEditing ? (
-                      <button
-                        className="btn secondary"
-                        type="button"
-                        onClick={resetManagedUserForm}
-                        disabled={submittingUser}
-                      >
-                        Cancel Editing
-                      </button>
-                    ) : null}
-                  </div>
-                </form>
-              </div>
-
-              <div className="section-card">
-                <div className="section-heading">
-                  <div>
-                    <p className="eyebrow">Managed Accounts</p>
-                    <h2>{managedUsers.length} landlord and renter accounts</h2>
-                  </div>
-                </div>
-
-                <div className="auth-tabs" role="tablist" aria-label="Managed user roles">
-                  <button
-                    type="button"
-                    className={filterRole === "all" ? "tab active" : "tab"}
-                    onClick={() => setFilterRole("all")}
-                  >
-                    All
-                  </button>
-                  <button
-                    type="button"
-                    className={filterRole === "landlord" ? "tab active" : "tab"}
-                    onClick={() => setFilterRole("landlord")}
-                  >
-                    Landlords
-                  </button>
-                  <button
-                    type="button"
-                    className={filterRole === "renter" ? "tab active" : "tab"}
-                    onClick={() => setFilterRole("renter")}
-                  >
-                    Renters
-                  </button>
-                </div>
-
-                {usersError ? <div className="status-card error">{usersError}</div> : null}
-
-                {usersLoading ? (
-                  <div className="status-card">Loading landlords and renters...</div>
-                ) : filteredUsers.length === 0 ? (
-                  <div className="status-card">No managed users found for this filter.</div>
-                ) : (
-                  <div className="dashboard-list">
-                    {filteredUsers.map((managedUser) => (
-                      <article key={managedUser.id} className="listing-row compact admin-user-row">
-                        <div className="listing-copy">
-                          <div className="admin-user-heading">
-                            <h3>{managedUser.name}</h3>
-                            <span className="pill neutral">{managedUser.role}</span>
-                          </div>
-                          <p>{managedUser.email}</p>
-                          <p>{managedUser.phone || "No phone added"}</p>
-                          <p>
-                            Listings: {managedUser.properties_count} | Contact unlocks:{" "}
-                            {managedUser.unlocks_count}
-                          </p>
-                        </div>
-
-                        <div className="listing-actions admin-user-actions">
-                          <button
-                            className="btn secondary"
-                            type="button"
-                            onClick={() => handleEditUser(managedUser)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="btn danger"
-                            type="button"
-                            onClick={() => handleDeleteUser(managedUser)}
-                            disabled={deletingUserId === managedUser.id}
-                          >
-                            {deletingUserId === managedUser.id ? "Deleting..." : "Delete"}
-                          </button>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="section-card">
-              <div className="section-heading">
-                <div>
-                  <p className="eyebrow">Property Activity</p>
-                  <h2>All listings</h2>
-                </div>
-              </div>
-
-              {overview.properties.length === 0 ? (
-                <div className="status-card">No properties found.</div>
-              ) : (
-                <div className="dashboard-list">
-                  {overview.properties.map((property) => (
-                    <article key={property.id} className="listing-row compact">
-                      <div className="listing-copy">
-                        <h3>{property.type}</h3>
-                        <p>{property.location}</p>
-                        <p>Landlord: {property.landlord_name || "Unknown"}</p>
-                      </div>
-
-                      <div className="listing-actions">
-                        <span className={`pill ${property.status}`}>
-                          {property.status}
-                        </span>
-                        <strong>N{Number(property.price).toLocaleString()}</strong>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </section>
+            {activeSection === "revenue" ? (
+              <AdminRevenueSection
+                revenueError={revenueError}
+                revenueLoading={revenueLoading}
+                revenueSummary={revenueSummary}
+                transactions={transactions}
+              />
+            ) : null}
+          </section>
+        </main>
+      </div>
     </div>
   );
 }

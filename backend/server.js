@@ -48,8 +48,37 @@ async function startServer() {
 
   app.use("/api/auth", require("./routes/auth"));
   app.use("/api/property", require("./routes/property"));
+  app.use("/api/landlord", require("./routes/landlord"));
   app.use("/api/payment", require("./routes/payment"));
   app.use("/api/admin", require("./routes/admin"));
+  app.use("/api/admin/technicians", require("./routes/adminTechnicians"));
+  app.use("/api/technicians", require("./routes/technician"));
+
+  // Public testimonials endpoint
+  app.get("/api/testimonials", async (req, res, next) => {
+    try {
+      const { getPool } = require("./config/db");
+      const pool = getPool();
+      const [rows] = await pool.execute(
+        "SELECT id, name, role, video_url, avatar_url, rating, text_content, created_at FROM testimonials ORDER BY created_at DESC LIMIT 6"
+      );
+
+      return res.json({
+        testimonials: rows.map(row => ({
+          id: row.id,
+          name: row.name,
+          role: row.role,
+          videoUrl: row.video_url,
+          avatarUrl: row.avatar_url,
+          rating: row.rating,
+          textContent: row.text_content,
+          createdAt: row.created_at
+        }))
+      });
+    } catch (error) {
+      return next(error);
+    }
+  });
 
   app.use((error, req, res, next) => {
     const statusCode = error.statusCode || 500;

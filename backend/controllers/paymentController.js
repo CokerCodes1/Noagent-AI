@@ -1,9 +1,13 @@
 const axios = require("axios");
 const { getPool } = require("../config/db");
+const {
+  getContactPersonLabel,
+  getContactUnlockFeeKobo,
+  normalizeListingPurpose
+} = require("../utils/propertyListing");
 
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET || "";
-const PAYSTACK_CONTACT_FEE_KOBO = Number(process.env.PAYSTACK_CONTACT_FEE_KOBO || 20000);
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 function ensurePaystackConfigured(res) {
@@ -25,7 +29,7 @@ exports.initializePayment = async (req, res, next) => {
     const pool = getPool();
 
     const [properties] = await pool.execute(
-      "SELECT id, landlord_id, status FROM properties WHERE id = ? LIMIT 1",
+      "SELECT id, landlord_id, status, listing_purpose FROM properties WHERE id = ? LIMIT 1",
       [propertyId]
     );
 
@@ -34,6 +38,8 @@ exports.initializePayment = async (req, res, next) => {
     }
 
     const property = properties[0];
+    const listingPurpose = normalizeListingPurpose(property.listing_purpose);
+    const contactFeeKobo = getContactUnlockFeeKobo(listingPurpose);
 
     if (property.status !== "available") {
       return res.status(400).json({ message: "This property is no longer available." });
@@ -64,11 +70,12 @@ exports.initializePayment = async (req, res, next) => {
       `${PAYSTACK_BASE_URL}/transaction/initialize`,
       {
         email: req.user.email,
-        amount: PAYSTACK_CONTACT_FEE_KOBO,
+        amount: contactFeeKobo,
         callback_url: `${FRONTEND_URL}/payment-success`,
         metadata: {
           renter_id: req.user.id,
-          property_id: propertyId
+          property_id: propertyId,
+          listing_purpose: listingPurpose
         }
       },
       {
@@ -107,6 +114,8 @@ exports.verifyPayment = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Payment verification failed." });
     }
 
+    const paidAmount = Number(transaction.amount || 0);
+
     const renterId = Number(transaction.metadata?.renter_id);
     const propertyId = Number(transaction.metadata?.property_id);
 
@@ -120,12 +129,23 @@ exports.verifyPayment = async (req, res, next) => {
 
     const pool = getPool();
     const [properties] = await pool.execute(
-      "SELECT id FROM properties WHERE id = ? LIMIT 1",
+      "SELECT id, listing_purpose FROM properties WHERE id = ? LIMIT 1",
       [propertyId]
     );
 
     if (properties.length === 0) {
       return res.status(404).json({ success: false, message: "Property not found." });
+    }
+
+    const property = properties[0];
+    const listingPurpose = normalizeListingPurpose(property.listing_purpose);
+    const requiredContactFeeKobo = getContactUnlockFeeKobo(listingPurpose);
+
+    if (paidAmount < requiredContactFeeKobo) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment amount is lower than the required contact unlock fee."
+      });
     }
 
     await pool.execute(
@@ -145,14 +165,16 @@ exports.verifyPayment = async (req, res, next) => {
         renterId,
         reference,
         transaction.customer?.email || req.user.email,
-        Number(transaction.amount || PAYSTACK_CONTACT_FEE_KOBO)
+        paidAmount || requiredContactFeeKobo
       ]
     );
 
     return res.json({
       success: true,
       property_id: propertyId,
-      amount_paid: Number(transaction.amount || PAYSTACK_CONTACT_FEE_KOBO)
+      amount_paid: paidAmount || requiredContactFeeKobo,
+      listing_purpose: listingPurpose,
+      contact_label: getContactPersonLabel(listingPurpose)
     });
   } catch (error) {
     return next(error);

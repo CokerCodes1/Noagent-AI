@@ -14,7 +14,7 @@ export default function DashboardHeader({ title, subtitle }) {
 
   return (
     <div className="dashboard-header">
-      <div>
+      <div className="dashboard-header-copy">
         <p className="eyebrow">{user?.role || "user"} dashboard</p>
         <h1>{title}</h1>
         {subtitle ? <p className="section-copy">{subtitle}</p> : null}

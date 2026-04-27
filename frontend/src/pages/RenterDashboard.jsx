@@ -1,11 +1,19 @@
 import { useEffect, useEffectEvent, useState } from "react";
+import { Navigate, useLocation } from "react-router-dom";
 import { io } from "socket.io-client";
 import { toast } from "react-toastify";
 import api, { BACKEND_URL, extractErrorMessage } from "../api/axios.js";
 import DashboardHeader from "../components/DashboardHeader.jsx";
 import Hero from "../components/Hero.jsx";
+import {
+  getCurrentRenterSection,
+  renterNavOrder,
+  renterSections
+} from "../components/renter/renterConfig.js";
 import PropertyCard from "../components/PropertyCard.jsx";
 import SkeletonCard from "../components/SkeletonCard.jsx";
+import TechnicianMarketplaceSection from "../components/technicians/TechnicianMarketplaceSection.jsx";
+import WorkspaceSidebar from "../components/workspace/WorkspaceSidebar.jsx";
 import { clearAuthSession, getStoredUser } from "../utils/session.js";
 
 function applyFilters(properties, filters) {
@@ -27,6 +35,9 @@ function applyFilters(properties, filters) {
 }
 
 export default function RenterDashboard() {
+  const location = useLocation();
+  const user = getStoredUser();
+  const activeSection = getCurrentRenterSection(location.pathname);
   const [allProperties, setAllProperties] = useState([]);
   const [filters, setFilters] = useState({});
   const [loading, setLoading] = useState(true);
@@ -76,55 +87,92 @@ export default function RenterDashboard() {
     };
   }, []);
 
+  if (!activeSection) {
+    return <Navigate to="/renter" replace />;
+  }
+
   const filteredProperties = applyFilters(allProperties, filters);
-  const user = getStoredUser();
+  const section = renterSections[activeSection];
+  const summary = (
+    <>
+      <div className="admin-sidebar-pill">
+        <span>{allProperties.length} active listings</span>
+      </div>
+      <div className="admin-sidebar-pill">
+        <span>Rent and sale listings in one place</span>
+      </div>
+    </>
+  );
 
   return (
     <div className="dashboard-shell">
-      <section className="dashboard-section">
-        <DashboardHeader
-          title={`Welcome back${user?.name ? `, ${user.name}` : ""}`}
-          subtitle="Browse listings, unlock landlord contact after payment, and log out cleanly from the same screen."
+      <div className="admin-shell">
+        <WorkspaceSidebar
+          brand="NoAgentNaija"
+          title="Renter Workspace"
+          description="Move between property discovery and technician contacts from one clean sidebar."
+          items={renterNavOrder.map((sectionKey) => renterSections[sectionKey])}
+          summary={summary}
         />
-      </section>
 
-      <Hero
-        title={`Welcome back${user?.name ? `, ${user.name}` : ""}`}
-        subtitle="Browse verified listings, unlock contact after payment, and get real-time updates when landlords post or mark properties as rented."
-        onSearch={setFilters}
-      />
+        <main className="admin-content">
+          <DashboardHeader
+            title={`${section.label} for ${user?.name || "Renter"}`}
+            subtitle={section.description}
+          />
 
-      <section className="dashboard-section">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Renter Dashboard</p>
-            <h2>Available Listings</h2>
-          </div>
-          <p>{filteredProperties.length} properties match your filters</p>
-        </div>
-
-        {error ? <div className="status-card error">{error}</div> : null}
-
-        {loading ? (
-          <div className="grid">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <SkeletonCard key={index} />
-            ))}
-          </div>
-        ) : filteredProperties.length === 0 ? (
-          <div className="status-card">No properties matched your current filters.</div>
-        ) : (
-          <div className="grid">
-            {filteredProperties.map((property) => (
-              <PropertyCard
-                key={property.id}
-                property={property}
-                onPaymentStateChange={loadProperties}
+          {activeSection === "properties" ? (
+            <>
+              <Hero
+                title={`Welcome back${user?.name ? `, ${user.name}` : ""}`}
+                subtitle="Browse verified properties for rent and sale, unlock verified owner contact, and get real-time listing updates."
+                onSearch={setFilters}
               />
-            ))}
-          </div>
-        )}
-      </section>
+
+              <section className="dashboard-section admin-content-section">
+                <div className="section-heading">
+                  <div>
+                    <p className="eyebrow">Renter Dashboard</p>
+                    <h2>Available Properties</h2>
+                  </div>
+                  <p>{filteredProperties.length} properties match your filters</p>
+                </div>
+
+                {error ? <div className="status-card error">{error}</div> : null}
+
+                {loading ? (
+                  <div className="grid">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <SkeletonCard key={index} />
+                    ))}
+                  </div>
+                ) : filteredProperties.length === 0 ? (
+                  <div className="status-card">
+                    No properties matched your current filters.
+                  </div>
+                ) : (
+                  <div className="grid">
+                    {filteredProperties.map((property) => (
+                      <PropertyCard
+                        key={property.id}
+                        property={property}
+                        onPaymentStateChange={loadProperties}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            </>
+          ) : null}
+
+          {activeSection === "technicians" ? (
+            <TechnicianMarketplaceSection
+              title="Technicians You Can Contact"
+              subtitle="Browse technicians, view their skills, and contact them directly from your renter workspace."
+            />
+          ) : null}
+        </main>
+      </div>
     </div>
   );
 }

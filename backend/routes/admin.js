@@ -2,6 +2,15 @@ const bcrypt = require("bcryptjs");
 const router = require("express").Router();
 const { getPool } = require("../config/db");
 const { authorizeRoles, verifyToken } = require("../middleware/auth");
+const upload = require("../middleware/upload");
+const { ensureTechnicianRecords } = require("../utils/technicianProfile");
+const {
+  getContactPersonLabel,
+  getContactUnlockFeeKobo,
+  getContactUnlockFeeNaira,
+  getListingPurposeLabel,
+  normalizeListingPurpose
+} = require("../utils/propertyListing");
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "cokarproperties001@gmail.com").toLowerCase();
 
@@ -9,8 +18,68 @@ function normalizeEmail(email = "") {
   return String(email).trim().toLowerCase();
 }
 
+function normalizeName(name = "") {
+  return String(name).trim();
+}
+
+function normalizePhone(phone = "") {
+  const digits = String(phone).replace(/\D/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  if (digits.startsWith("234")) {
+    return digits;
+  }
+
+  if (digits.startsWith("0")) {
+    return `234${digits.slice(1)}`;
+  }
+
+  return `234${digits}`;
+}
+
+function buildWhatsAppLink(phone = "") {
+  const normalizedPhone = normalizePhone(phone);
+  return normalizedPhone ? `https://wa.me/${normalizedPhone}` : "";
+}
+
 function normalizeRole(role = "") {
-  return role === "landlord" ? "landlord" : role === "renter" ? "renter" : "";
+  if (role === "admin") {
+    return "admin";
+  }
+
+  if (role === "landlord") {
+    return "landlord";
+  }
+
+  if (role === "renter") {
+    return "renter";
+  }
+
+  if (role === "technician") {
+    return "technician";
+  }
+
+  return "";
+}
+
+function normalizePropertyStatus(status = "") {
+  if (status === "sold") {
+    return "sold";
+  }
+
+  return status === "rented" ? "rented" : "available";
+}
+
+function parseImages(images) {
+  try {
+    const parsed = JSON.parse(images || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
 }
 
 function mapManagedUser(row) {
@@ -20,64 +89,246 @@ function mapManagedUser(row) {
     email: row.email,
     phone: row.phone || "",
     role: row.role,
+    is_protected: normalizeEmail(row.email) === ADMIN_EMAIL,
     created_at: row.created_at,
     properties_count: Number(row.properties_count || 0),
     unlocks_count: Number(row.unlocks_count || 0)
   };
 }
 
+function mapManagedProperty(row) {
+  const listingPurpose = normalizeListingPurpose(row.listing_purpose);
+
+  return {
+    id: row.id,
+    landlord_id: row.landlord_id,
+    landlord_name: row.landlord_name || "",
+    landlord_email: row.landlord_email || "",
+    type: row.type,
+    listing_purpose: listingPurpose,
+    listing_purpose_label: getListingPurposeLabel(listingPurpose),
+    description: row.description,
+    location: row.location,
+    price: Number(row.price),
+    phone: row.phone || "",
+    wa_link: row.wa_link || "",
+    images: parseImages(row.images),
+    video: row.video || "",
+    status: row.status,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    unlocks_count: Number(row.unlocks_count || 0),
+    contact_fee_kobo: getContactUnlockFeeKobo(listingPurpose),
+    contact_fee_naira: getContactUnlockFeeNaira(listingPurpose),
+    contact_label: getContactPersonLabel(listingPurpose)
+  };
+}
+
+function mapRevenueRow(row) {
+  return {
+    id: row.id,
+    reference: row.reference,
+    email: row.email,
+    amount_paid: Number(row.amount_paid || 0),
+    status: row.status,
+    paid_at: row.paid_at,
+    property_id: row.property_id,
+    property_type: row.property_type || "",
+    property_location: row.property_location || "",
+    renter_id: row.renter_id,
+    renter_name: row.renter_name || "",
+    renter_email: row.renter_email || "",
+    landlord_id: row.landlord_id,
+    landlord_name: row.landlord_name || "",
+    landlord_email: row.landlord_email || ""
+  };
+}
+
+async function fetchManagedUserById(pool, userId) {
+  const [[user]] = await pool.execute(
+    `
+      SELECT
+        u.id,
+        u.name,
+        u.email,
+        u.phone,
+        u.role,
+        u.created_at,
+        COALESCE(property_stats.properties_count, 0) AS properties_count,
+        COALESCE(unlock_stats.unlocks_count, 0) AS unlocks_count
+      FROM users u
+      LEFT JOIN (
+        SELECT landlord_id, COUNT(*) AS properties_count
+        FROM properties
+        GROUP BY landlord_id
+      ) AS property_stats
+        ON property_stats.landlord_id = u.id
+      LEFT JOIN (
+        SELECT renter_id, COUNT(*) AS unlocks_count
+        FROM property_contact_unlocks
+        WHERE status = 'success'
+        GROUP BY renter_id
+      ) AS unlock_stats
+        ON unlock_stats.renter_id = u.id
+      WHERE u.id = ?
+      LIMIT 1
+    `,
+    [userId]
+  );
+
+  return user ? mapManagedUser(user) : null;
+}
+
+async function fetchManagedPropertyById(pool, propertyId) {
+  const [[property]] = await pool.execute(
+    `
+      SELECT
+        p.*,
+        u.name AS landlord_name,
+        u.email AS landlord_email,
+        COALESCE(unlock_stats.unlocks_count, 0) AS unlocks_count
+      FROM properties p
+      LEFT JOIN users u
+        ON u.id = p.landlord_id
+      LEFT JOIN (
+        SELECT property_id, COUNT(*) AS unlocks_count
+        FROM property_contact_unlocks
+        WHERE status = 'success'
+        GROUP BY property_id
+      ) AS unlock_stats
+        ON unlock_stats.property_id = p.id
+      WHERE p.id = ?
+      LIMIT 1
+    `,
+    [propertyId]
+  );
+
+  return property ? mapManagedProperty(property) : null;
+}
+
+async function ensureAssignableLandlord(pool, landlordId) {
+  const [[landlord]] = await pool.execute(
+    "SELECT id, role, name, email FROM users WHERE id = ? LIMIT 1",
+    [landlordId]
+  );
+
+  if (!landlord || landlord.role !== "landlord") {
+    return null;
+  }
+
+  return landlord;
+}
+
 router.get("/overview", verifyToken, authorizeRoles("admin"), async (req, res, next) => {
   try {
     const pool = getPool();
-    const [[usersCount]] = await pool.execute("SELECT COUNT(*) AS total FROM users");
-    const [[landlordsCount]] = await pool.execute(
-      "SELECT COUNT(*) AS total FROM users WHERE role = 'landlord'"
-    );
-    const [[rentersCount]] = await pool.execute(
-      "SELECT COUNT(*) AS total FROM users WHERE role = 'renter'"
-    );
-    const [[propertiesCount]] = await pool.execute("SELECT COUNT(*) AS total FROM properties");
-    const [[availablePropertiesCount]] = await pool.execute(
-      "SELECT COUNT(*) AS total FROM properties WHERE status = 'available'"
-    );
-    const [[rentedPropertiesCount]] = await pool.execute(
-      "SELECT COUNT(*) AS total FROM properties WHERE status = 'rented'"
-    );
-    const [[revenue]] = await pool.execute(
-      `
-        SELECT COALESCE(SUM(amount_paid), 0) AS total
-        FROM property_contact_unlocks
-        WHERE status = 'success'
-      `
-    );
-    const [properties] = await pool.execute(
-      `
-        SELECT
-          p.id,
-          p.type,
-          p.location,
-          p.price,
-          p.status,
-          p.created_at,
-          u.name AS landlord_name
-        FROM properties p
-        LEFT JOIN users u
-          ON u.id = p.landlord_id
-        ORDER BY p.created_at DESC
-      `
-    );
+    const [
+      [usersCountRows],
+      [adminsCountRows],
+      [landlordsCountRows],
+      [rentersCountRows],
+      [techniciansCountRows],
+      [propertiesCountRows],
+      [availablePropertiesCountRows],
+      [rentedPropertiesCountRows],
+      [soldPropertiesCountRows],
+      [revenueRows],
+      [successfulTransactionsRows],
+      recentPropertiesRows,
+      recentTransactionsRows
+    ] = await Promise.all([
+      pool.execute("SELECT COUNT(*) AS total FROM users"),
+      pool.execute("SELECT COUNT(*) AS total FROM users WHERE role = 'admin'"),
+      pool.execute("SELECT COUNT(*) AS total FROM users WHERE role = 'landlord'"),
+      pool.execute("SELECT COUNT(*) AS total FROM users WHERE role = 'renter'"),
+      pool.execute("SELECT COUNT(*) AS total FROM users WHERE role = 'technician'"),
+      pool.execute("SELECT COUNT(*) AS total FROM properties"),
+      pool.execute("SELECT COUNT(*) AS total FROM properties WHERE status = 'available'"),
+      pool.execute("SELECT COUNT(*) AS total FROM properties WHERE status = 'rented'"),
+      pool.execute("SELECT COUNT(*) AS total FROM properties WHERE status = 'sold'"),
+      pool.execute(
+        `
+          SELECT COALESCE(SUM(amount_paid), 0) AS total
+          FROM property_contact_unlocks
+          WHERE status = 'success'
+        `
+      ),
+      pool.execute(
+        `
+          SELECT COUNT(*) AS total
+          FROM property_contact_unlocks
+          WHERE status = 'success'
+        `
+      ),
+      pool.execute(
+        `
+          SELECT
+            p.*,
+            u.name AS landlord_name,
+            u.email AS landlord_email,
+            COALESCE(unlock_stats.unlocks_count, 0) AS unlocks_count
+          FROM properties p
+          LEFT JOIN users u
+            ON u.id = p.landlord_id
+          LEFT JOIN (
+            SELECT property_id, COUNT(*) AS unlocks_count
+            FROM property_contact_unlocks
+            WHERE status = 'success'
+            GROUP BY property_id
+          ) AS unlock_stats
+            ON unlock_stats.property_id = p.id
+          ORDER BY p.created_at DESC
+          LIMIT 6
+        `
+      ),
+      pool.execute(
+        `
+          SELECT
+            unlocks.id,
+            unlocks.reference,
+            unlocks.email,
+            unlocks.amount_paid,
+            unlocks.status,
+            unlocks.paid_at,
+            unlocks.property_id,
+            property.type AS property_type,
+            property.location AS property_location,
+            unlocks.renter_id,
+            renter.name AS renter_name,
+            renter.email AS renter_email,
+            property.landlord_id,
+            landlord.name AS landlord_name,
+            landlord.email AS landlord_email
+          FROM property_contact_unlocks unlocks
+          LEFT JOIN properties property
+            ON property.id = unlocks.property_id
+          LEFT JOIN users renter
+            ON renter.id = unlocks.renter_id
+          LEFT JOIN users landlord
+            ON landlord.id = property.landlord_id
+          WHERE unlocks.status = 'success'
+          ORDER BY COALESCE(unlocks.paid_at, unlocks.created_at) DESC
+          LIMIT 6
+        `
+      )
+    ]);
 
     return res.json({
       stats: {
-        users: usersCount.total,
-        landlords: landlordsCount.total,
-        renters: rentersCount.total,
-        properties: propertiesCount.total,
-        availableProperties: availablePropertiesCount.total,
-        rentedProperties: rentedPropertiesCount.total,
-        revenue: Number(revenue.total)
+        users: usersCountRows[0].total,
+        admins: adminsCountRows[0].total,
+        landlords: landlordsCountRows[0].total,
+        renters: rentersCountRows[0].total,
+        technicians: techniciansCountRows[0].total,
+        properties: propertiesCountRows[0].total,
+        availableProperties: availablePropertiesCountRows[0].total,
+        rentedProperties: rentedPropertiesCountRows[0].total,
+        soldProperties: soldPropertiesCountRows[0].total,
+        revenue: Number(revenueRows[0].total),
+        successfulTransactions: successfulTransactionsRows[0].total
       },
-      properties
+      properties: recentPropertiesRows.map(mapManagedProperty),
+      recentTransactions: recentTransactionsRows.map(mapRevenueRow)
     });
   } catch (error) {
     return next(error);
@@ -112,8 +363,7 @@ router.get("/users", verifyToken, authorizeRoles("admin"), async (req, res, next
           GROUP BY renter_id
         ) AS unlock_stats
           ON unlock_stats.renter_id = u.id
-        WHERE u.role IN ('landlord', 'renter')
-        ORDER BY FIELD(u.role, 'landlord', 'renter'), u.created_at DESC
+        ORDER BY FIELD(u.role, 'admin', 'landlord', 'technician', 'renter'), u.created_at DESC
       `
     );
 
@@ -126,18 +376,20 @@ router.get("/users", verifyToken, authorizeRoles("admin"), async (req, res, next
 router.post("/users", verifyToken, authorizeRoles("admin"), async (req, res, next) => {
   try {
     const { name, email, phone = "", password, role } = req.body;
+    const normalizedName = normalizeName(name);
     const normalizedEmail = normalizeEmail(email);
     const normalizedRole = normalizeRole(role);
+    const normalizedPhone = normalizePhone(phone);
 
-    if (!name || !normalizedEmail || !password || !normalizedRole) {
+    if (!normalizedName || !normalizedEmail || !password || !normalizedRole) {
       return res.status(400).json({
         message: "Name, email, password, and a valid role are required."
       });
     }
 
-    if (normalizedEmail === ADMIN_EMAIL) {
+    if (normalizedEmail === ADMIN_EMAIL && normalizedRole !== "admin") {
       return res.status(400).json({
-        message: "The reserved admin email cannot be assigned to a landlord or renter."
+        message: "The reserved admin email can only be assigned to an admin account."
       });
     }
 
@@ -156,33 +408,37 @@ router.post("/users", verifyToken, authorizeRoles("admin"), async (req, res, nex
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const [result] = await pool.execute(
-      "INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)",
-      [name.trim(), normalizedEmail, String(phone).trim(), hashedPassword, normalizedRole]
-    );
+    const connection = await pool.getConnection();
 
-    const [[createdUser]] = await pool.execute(
-      `
-        SELECT
-          id,
-          name,
-          email,
-          phone,
-          role,
-          created_at,
-          0 AS properties_count,
-          0 AS unlocks_count
-        FROM users
-        WHERE id = ?
-        LIMIT 1
-      `,
-      [result.insertId]
-    );
+    try {
+      await connection.beginTransaction();
+      const [result] = await connection.execute(
+        "INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)",
+        [normalizedName, normalizedEmail, normalizedPhone, hashedPassword, normalizedRole]
+      );
 
-    return res.status(201).json({
-      message: `${normalizedRole === "landlord" ? "Landlord" : "Renter"} created successfully.`,
-      user: mapManagedUser(createdUser)
-    });
+      if (normalizedRole === "technician") {
+        await ensureTechnicianRecords(connection, {
+          id: result.insertId,
+          name: normalizedName,
+          phone: normalizedPhone
+        });
+      }
+
+      await connection.commit();
+
+      const createdUser = await fetchManagedUserById(pool, result.insertId);
+
+      return res.status(201).json({
+        message: `${normalizedRole.charAt(0).toUpperCase()}${normalizedRole.slice(1)} created successfully.`,
+        user: createdUser
+      });
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   } catch (error) {
     return next(error);
   }
@@ -192,22 +448,24 @@ router.put("/users/:id", verifyToken, authorizeRoles("admin"), async (req, res, 
   try {
     const userId = Number(req.params.id);
     const { name, email, phone = "", password = "", role } = req.body;
+    const normalizedName = normalizeName(name);
     const normalizedEmail = normalizeEmail(email);
     const normalizedRole = normalizeRole(role);
+    const normalizedPhone = normalizePhone(phone);
 
     if (!userId) {
       return res.status(400).json({ message: "A valid user id is required." });
     }
 
-    if (!name || !normalizedEmail || !normalizedRole) {
+    if (!normalizedName || !normalizedEmail || !normalizedRole) {
       return res.status(400).json({
         message: "Name, email, and a valid role are required."
       });
     }
 
-    if (normalizedEmail === ADMIN_EMAIL) {
+    if (normalizedEmail === ADMIN_EMAIL && normalizedRole !== "admin") {
       return res.status(400).json({
-        message: "The reserved admin email cannot be assigned to a landlord or renter."
+        message: "The reserved admin email must remain assigned to an admin account."
       });
     }
 
@@ -221,8 +479,17 @@ router.put("/users/:id", verifyToken, authorizeRoles("admin"), async (req, res, 
       [userId]
     );
 
-    if (!existingUser || !["landlord", "renter"].includes(existingUser.role)) {
-      return res.status(404).json({ message: "Managed user not found." });
+    if (!existingUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    if (
+      normalizeEmail(existingUser.email) === ADMIN_EMAIL &&
+      normalizedRole !== "admin"
+    ) {
+      return res.status(400).json({
+        message: "The reserved admin account cannot be reassigned to another role."
+      });
     }
 
     const [emailConflict] = await pool.execute(
@@ -234,76 +501,73 @@ router.put("/users/:id", verifyToken, authorizeRoles("admin"), async (req, res, 
       return res.status(409).json({ message: "Another account already uses this email." });
     }
 
-    if (existingUser.role === "landlord" && normalizedRole === "renter") {
-      const [[propertyCount]] = await pool.execute(
-        "SELECT COUNT(*) AS total FROM properties WHERE landlord_id = ?",
-        [userId]
-      );
+    if (existingUser.role === "landlord" && normalizedRole !== "landlord") {
+      const [propertyCountResult, tenantCountResult, financeCountResult] = await Promise.all([
+        pool.execute("SELECT COUNT(*) AS total FROM properties WHERE landlord_id = ?", [userId]),
+        pool.execute("SELECT COUNT(*) AS total FROM landlord_tenants WHERE landlord_id = ?", [userId]),
+        pool.execute("SELECT COUNT(*) AS total FROM landlord_finance_records WHERE landlord_id = ?", [userId])
+      ]);
+      const propertyCount = propertyCountResult[0][0];
+      const tenantCount = tenantCountResult[0][0];
+      const financeCount = financeCountResult[0][0];
 
-      if (propertyCount.total > 0) {
+      if (propertyCount.total > 0 || tenantCount.total > 0 || financeCount.total > 0) {
         return res.status(409).json({
-          message: "This landlord still has property listings. Remove or reassign them before changing the role."
+          message: "This landlord still has linked records. Remove or reassign their properties, tenants, and finance records before changing the role."
         });
       }
     }
 
-    const updates = [
-      "name = ?",
-      "email = ?",
-      "phone = ?",
-      "role = ?"
-    ];
-    const values = [
-      name.trim(),
-      normalizedEmail,
-      String(phone).trim(),
-      normalizedRole
-    ];
+    const connection = await pool.getConnection();
 
-    if (password) {
-      updates.push("password = ?");
-      values.push(await bcrypt.hash(password, 10));
+    try {
+      await connection.beginTransaction();
+
+      const updates = ["name = ?", "email = ?", "phone = ?", "role = ?"];
+      const values = [normalizedName, normalizedEmail, normalizedPhone, normalizedRole];
+
+      if (password) {
+        updates.push("password = ?");
+        values.push(await bcrypt.hash(password, 10));
+      }
+
+      values.push(userId);
+
+      await connection.execute(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`, values);
+
+      if (normalizedRole === "technician") {
+        await ensureTechnicianRecords(connection, {
+          id: userId,
+          name: normalizedName,
+          phone: normalizedPhone
+        });
+      } else if (existingUser.role === "technician" && normalizedRole !== "technician") {
+        const [[technician]] = await connection.execute(
+          "SELECT id FROM technicians WHERE user_id = ? LIMIT 1",
+          [userId]
+        );
+
+        if (technician) {
+          await connection.execute("DELETE FROM technician_portfolios WHERE technician_id = ?", [technician.id]);
+          await connection.execute("DELETE FROM technician_stats WHERE technician_id = ?", [technician.id]);
+          await connection.execute("DELETE FROM technicians WHERE id = ?", [technician.id]);
+        }
+      }
+
+      await connection.commit();
+
+      const updatedUser = await fetchManagedUserById(pool, userId);
+
+      return res.json({
+        message: "User updated successfully.",
+        user: updatedUser
+      });
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
     }
-
-    values.push(userId);
-
-    await pool.execute(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`, values);
-
-    const [[updatedUser]] = await pool.execute(
-      `
-        SELECT
-          u.id,
-          u.name,
-          u.email,
-          u.phone,
-          u.role,
-          u.created_at,
-          COALESCE(property_stats.properties_count, 0) AS properties_count,
-          COALESCE(unlock_stats.unlocks_count, 0) AS unlocks_count
-        FROM users u
-        LEFT JOIN (
-          SELECT landlord_id, COUNT(*) AS properties_count
-          FROM properties
-          GROUP BY landlord_id
-        ) AS property_stats
-          ON property_stats.landlord_id = u.id
-        LEFT JOIN (
-          SELECT renter_id, COUNT(*) AS unlocks_count
-          FROM property_contact_unlocks
-          WHERE status = 'success'
-          GROUP BY renter_id
-        ) AS unlock_stats
-          ON unlock_stats.renter_id = u.id
-        WHERE u.id = ?
-        LIMIT 1
-      `,
-      [userId]
-    );
-
-    return res.json({
-      message: "User updated successfully.",
-      user: mapManagedUser(updatedUser)
-    });
   } catch (error) {
     return next(error);
   }
@@ -314,6 +578,10 @@ router.delete("/users/:id", verifyToken, authorizeRoles("admin"), async (req, re
 
   if (!userId) {
     return res.status(400).json({ message: "A valid user id is required." });
+  }
+
+  if (userId === req.user.id) {
+    return res.status(400).json({ message: "You cannot delete the admin account you are currently using." });
   }
 
   const pool = getPool();
@@ -327,9 +595,9 @@ router.delete("/users/:id", verifyToken, authorizeRoles("admin"), async (req, re
       [userId]
     );
 
-    if (!existingUser || !["landlord", "renter"].includes(existingUser.role)) {
+    if (!existingUser) {
       await connection.rollback();
-      return res.status(404).json({ message: "Managed user not found." });
+      return res.status(404).json({ message: "User not found." });
     }
 
     if (normalizeEmail(existingUser.email) === ADMIN_EMAIL) {
@@ -348,6 +616,17 @@ router.delete("/users/:id", verifyToken, authorizeRoles("admin"), async (req, re
       [userId]
     );
     await connection.execute("DELETE FROM property_contact_unlocks WHERE renter_id = ?", [userId]);
+    const [[technician]] = await connection.execute(
+      "SELECT id FROM technicians WHERE user_id = ? LIMIT 1",
+      [userId]
+    );
+    if (technician) {
+      await connection.execute("DELETE FROM technician_portfolios WHERE technician_id = ?", [technician.id]);
+      await connection.execute("DELETE FROM technician_stats WHERE technician_id = ?", [technician.id]);
+      await connection.execute("DELETE FROM technicians WHERE id = ?", [technician.id]);
+    }
+    await connection.execute("DELETE FROM landlord_finance_records WHERE landlord_id = ?", [userId]);
+    await connection.execute("DELETE FROM landlord_tenants WHERE landlord_id = ?", [userId]);
     await connection.execute("DELETE FROM properties WHERE landlord_id = ?", [userId]);
     await connection.execute("DELETE FROM users WHERE id = ?", [userId]);
 
@@ -361,6 +640,433 @@ router.delete("/users/:id", verifyToken, authorizeRoles("admin"), async (req, re
     return next(error);
   } finally {
     connection.release();
+  }
+});
+
+router.get("/properties", verifyToken, authorizeRoles("admin"), async (req, res, next) => {
+  try {
+    const pool = getPool();
+    const [rows] = await pool.execute(
+      `
+        SELECT
+          p.*,
+          u.name AS landlord_name,
+          u.email AS landlord_email,
+          COALESCE(unlock_stats.unlocks_count, 0) AS unlocks_count
+        FROM properties p
+        LEFT JOIN users u
+          ON u.id = p.landlord_id
+        LEFT JOIN (
+          SELECT property_id, COUNT(*) AS unlocks_count
+          FROM property_contact_unlocks
+          WHERE status = 'success'
+          GROUP BY property_id
+        ) AS unlock_stats
+          ON unlock_stats.property_id = p.id
+        ORDER BY p.created_at DESC
+      `
+    );
+
+    return res.json(rows.map(mapManagedProperty));
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.post(
+  "/properties",
+  verifyToken,
+  authorizeRoles("admin"),
+  upload.fields([
+    { name: "images", maxCount: 5 },
+    { name: "video", maxCount: 1 }
+  ]),
+  async (req, res, next) => {
+    try {
+      const {
+        landlord_id: landlordIdValue,
+        type,
+        listing_purpose: listingPurposeValue,
+        description,
+        location,
+        price,
+        phone
+      } = req.body;
+      const landlordId = Number(landlordIdValue);
+      const images = req.files?.images || [];
+      const video = req.files?.video?.[0];
+
+      if (!landlordId || !type || !description || !location || !price || !phone) {
+        return res.status(400).json({
+          message: "Landlord, type, description, location, price, and phone are required."
+        });
+      }
+
+      if (images.length === 0 || !video) {
+        return res.status(400).json({ message: "Please upload up to 5 images and exactly 1 video." });
+      }
+
+      if (images.length > 5) {
+        return res.status(400).json({ message: "You can upload a maximum of 5 images." });
+      }
+
+      const pool = getPool();
+      const landlord = await ensureAssignableLandlord(pool, landlordId);
+
+      if (!landlord) {
+        return res.status(404).json({ message: "Selected landlord was not found." });
+      }
+
+      const normalizedPhone = normalizePhone(phone);
+      const listingPurpose = normalizeListingPurpose(listingPurposeValue);
+      const [result] = await pool.execute(
+        `
+          INSERT INTO properties
+            (landlord_id, type, listing_purpose, description, location, price, phone, wa_link, images, video, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available')
+        `,
+        [
+          landlordId,
+          normalizeName(type),
+          listingPurpose,
+          String(description).trim(),
+          String(location).trim(),
+          Number(price),
+          normalizedPhone,
+          buildWhatsAppLink(phone),
+          JSON.stringify(images.map((file) => file.filename)),
+          video.filename
+        ]
+      );
+
+      const createdProperty = await fetchManagedPropertyById(pool, result.insertId);
+
+      return res.status(201).json({
+        message: "Property created successfully.",
+        property: createdProperty
+      });
+    } catch (error) {
+      return next(error);
+    }
+  }
+);
+
+router.put(
+  "/properties/:id",
+  verifyToken,
+  authorizeRoles("admin"),
+  upload.fields([
+    { name: "images", maxCount: 5 },
+    { name: "video", maxCount: 1 }
+  ]),
+  async (req, res, next) => {
+    try {
+      const propertyId = Number(req.params.id);
+      const {
+        landlord_id: landlordIdValue,
+        type,
+        listing_purpose: listingPurposeValue,
+        description,
+        location,
+        price,
+        phone,
+        status
+      } = req.body;
+      const landlordId = Number(landlordIdValue);
+      const newImages = req.files?.images || [];
+      const newVideo = req.files?.video?.[0];
+
+      if (!propertyId) {
+        return res.status(400).json({ message: "A valid property id is required." });
+      }
+
+      if (!landlordId || !type || !description || !location || !price || !phone) {
+        return res.status(400).json({
+          message: "Landlord, type, description, location, price, and phone are required."
+        });
+      }
+
+      if (newImages.length > 5) {
+        return res.status(400).json({ message: "You can upload a maximum of 5 images." });
+      }
+
+      const pool = getPool();
+      const landlord = await ensureAssignableLandlord(pool, landlordId);
+
+      if (!landlord) {
+        return res.status(404).json({ message: "Selected landlord was not found." });
+      }
+
+      const [[existingProperty]] = await pool.execute(
+        "SELECT id, images, video FROM properties WHERE id = ? LIMIT 1",
+        [propertyId]
+      );
+
+      if (!existingProperty) {
+        return res.status(404).json({ message: "Property not found." });
+      }
+
+      const imagesToStore =
+        newImages.length > 0
+          ? JSON.stringify(newImages.map((file) => file.filename))
+          : existingProperty.images;
+      const videoToStore = newVideo ? newVideo.filename : existingProperty.video;
+      const normalizedPhone = normalizePhone(phone);
+      const listingPurpose = normalizeListingPurpose(listingPurposeValue);
+
+      await pool.execute(
+        `
+          UPDATE properties
+          SET
+            landlord_id = ?,
+            type = ?,
+            listing_purpose = ?,
+            description = ?,
+            location = ?,
+            price = ?,
+            phone = ?,
+            wa_link = ?,
+            images = ?,
+            video = ?,
+            status = ?
+          WHERE id = ?
+        `,
+        [
+          landlordId,
+          normalizeName(type),
+          listingPurpose,
+          String(description).trim(),
+          String(location).trim(),
+          Number(price),
+          normalizedPhone,
+          buildWhatsAppLink(phone),
+          imagesToStore,
+          videoToStore,
+          normalizePropertyStatus(status),
+          propertyId
+        ]
+      );
+
+      const updatedProperty = await fetchManagedPropertyById(pool, propertyId);
+
+      return res.json({
+        message: "Property updated successfully.",
+        property: updatedProperty
+      });
+    } catch (error) {
+      return next(error);
+    }
+  }
+);
+
+router.delete("/properties/:id", verifyToken, authorizeRoles("admin"), async (req, res, next) => {
+  const propertyId = Number(req.params.id);
+
+  if (!propertyId) {
+    return res.status(400).json({ message: "A valid property id is required." });
+  }
+
+  const pool = getPool();
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [[existingProperty]] = await connection.execute(
+      "SELECT id, type, location FROM properties WHERE id = ? LIMIT 1",
+      [propertyId]
+    );
+
+    if (!existingProperty) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Property not found." });
+    }
+
+    await connection.execute("DELETE FROM property_contact_unlocks WHERE property_id = ?", [propertyId]);
+    await connection.execute("DELETE FROM properties WHERE id = ?", [propertyId]);
+    await connection.commit();
+
+    return res.json({
+      message: `${existingProperty.type} in ${existingProperty.location} was deleted successfully.`
+    });
+  } catch (error) {
+    await connection.rollback();
+    return next(error);
+  } finally {
+    connection.release();
+  }
+});
+
+router.get("/revenue", verifyToken, authorizeRoles("admin"), async (req, res, next) => {
+  try {
+    const pool = getPool();
+    const [[summary]] = await pool.execute(
+      `
+        SELECT
+          COUNT(*) AS successful_transactions,
+          COALESCE(SUM(amount_paid), 0) AS total_revenue
+        FROM property_contact_unlocks
+        WHERE status = 'success'
+      `
+    );
+    const [rows] = await pool.execute(
+      `
+        SELECT
+          unlocks.id,
+          unlocks.reference,
+          unlocks.email,
+          unlocks.amount_paid,
+          unlocks.status,
+          unlocks.paid_at,
+          unlocks.property_id,
+          property.type AS property_type,
+          property.location AS property_location,
+          unlocks.renter_id,
+          renter.name AS renter_name,
+          renter.email AS renter_email,
+          property.landlord_id,
+          landlord.name AS landlord_name,
+          landlord.email AS landlord_email
+        FROM property_contact_unlocks unlocks
+        LEFT JOIN properties property
+          ON property.id = unlocks.property_id
+        LEFT JOIN users renter
+          ON renter.id = unlocks.renter_id
+        LEFT JOIN users landlord
+          ON landlord.id = property.landlord_id
+        WHERE unlocks.status = 'success'
+        ORDER BY COALESCE(unlocks.paid_at, unlocks.created_at) DESC
+      `
+    );
+
+    return res.json({
+      summary: {
+        successfulTransactions: Number(summary.successful_transactions || 0),
+        revenue: Number(summary.total_revenue || 0)
+      },
+      transactions: rows.map(mapRevenueRow)
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// Testimonials management
+router.get("/testimonials", verifyToken, authorizeRoles("admin"), async (req, res, next) => {
+  try {
+    const pool = getPool();
+    const [rows] = await pool.execute(
+      "SELECT id, name, role, video_url, avatar_url, rating, text_content, created_at FROM testimonials ORDER BY created_at DESC"
+    );
+
+    return res.json({
+      testimonials: rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        role: row.role,
+        videoUrl: row.video_url,
+        avatarUrl: row.avatar_url,
+        rating: row.rating,
+        textContent: row.text_content,
+        createdAt: row.created_at
+      }))
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.post("/testimonials", verifyToken, authorizeRoles("admin"), upload.single("video"), async (req, res, next) => {
+  try {
+    const { name, role, rating, textContent } = req.body;
+    const videoUrl = req.file ? `/uploads/${req.file.filename}` : "";
+    const avatarUrl = req.body.avatarUrl || "";
+
+    if (!name || !role) {
+      return res.status(400).json({ message: "Name and role are required." });
+    }
+
+    const pool = getPool();
+    const [result] = await pool.execute(
+      "INSERT INTO testimonials (name, role, video_url, avatar_url, rating, text_content) VALUES (?, ?, ?, ?, ?, ?)",
+      [name, role, videoUrl, avatarUrl, Number(rating) || 5, textContent || ""]
+    );
+
+    return res.status(201).json({
+      message: "Testimonial created successfully.",
+      testimonial: {
+        id: result.insertId,
+        name,
+        role,
+        videoUrl,
+        avatarUrl,
+        rating: Number(rating) || 5,
+        textContent: textContent || "",
+        createdAt: new Date()
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.put("/testimonials/:id", verifyToken, authorizeRoles("admin"), upload.single("video"), async (req, res, next) => {
+  try {
+    const testimonialId = Number(req.params.id);
+    const { name, role, rating, textContent } = req.body;
+    const videoUrl = req.file ? `/uploads/${req.file.filename}` : req.body.videoUrl || "";
+    const avatarUrl = req.body.avatarUrl || "";
+
+    if (!testimonialId) {
+      return res.status(400).json({ message: "A valid testimonial id is required." });
+    }
+
+    if (!name || !role) {
+      return res.status(400).json({ message: "Name and role are required." });
+    }
+
+    const pool = getPool();
+    const [existing] = await pool.execute(
+      "SELECT id FROM testimonials WHERE id = ? LIMIT 1",
+      [testimonialId]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ message: "Testimonial not found." });
+    }
+
+    await pool.execute(
+      "UPDATE testimonials SET name = ?, role = ?, video_url = ?, avatar_url = ?, rating = ?, text_content = ? WHERE id = ?",
+      [name, role, videoUrl, avatarUrl, Number(rating) || 5, textContent || "", testimonialId]
+    );
+
+    return res.json({ message: "Testimonial updated successfully." });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.delete("/testimonials/:id", verifyToken, authorizeRoles("admin"), async (req, res, next) => {
+  try {
+    const testimonialId = Number(req.params.id);
+
+    if (!testimonialId) {
+      return res.status(400).json({ message: "A valid testimonial id is required." });
+    }
+
+    const pool = getPool();
+    const [result] = await pool.execute(
+      "DELETE FROM testimonials WHERE id = ?",
+      [testimonialId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Testimonial not found." });
+    }
+
+    return res.json({ message: "Testimonial deleted successfully." });
+  } catch (error) {
+    return next(error);
   }
 });
 

@@ -29,6 +29,22 @@ export function getStoredRole() {
   return localStorage.getItem("role");
 }
 
+export function updateStoredUser(updates) {
+  const currentUser = getStoredUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const nextUser = {
+    ...currentUser,
+    ...updates
+  };
+
+  localStorage.setItem("user", JSON.stringify(nextUser));
+  return nextUser;
+}
+
 export function getDashboardPath(role) {
   if (role === "admin") {
     return "/admin";
@@ -36,6 +52,10 @@ export function getDashboardPath(role) {
 
   if (role === "landlord") {
     return "/landlord";
+  }
+
+  if (role === "technician") {
+    return "/technician";
   }
 
   return "/renter";

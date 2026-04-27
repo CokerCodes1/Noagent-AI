@@ -1,4 +1,11 @@
 const { getPool } = require("../config/db");
+const {
+  getContactPersonLabel,
+  getContactUnlockFeeKobo,
+  getContactUnlockFeeNaira,
+  getListingPurposeLabel,
+  normalizeListingPurpose
+} = require("../utils/propertyListing");
 
 function normalizePhone(phone = "") {
   const digits = String(phone).replace(/\D/g, "");
@@ -23,6 +30,14 @@ function buildWhatsAppLink(phone) {
   return normalizedPhone ? `https://wa.me/${normalizedPhone}` : "";
 }
 
+function normalizePropertyStatus(status = "") {
+  if (status === "sold") {
+    return "sold";
+  }
+
+  return status === "rented" ? "rented" : "available";
+}
+
 function parseImages(images) {
   try {
     const parsed = JSON.parse(images || "[]");
@@ -33,11 +48,15 @@ function parseImages(images) {
 }
 
 function mapPropertyRow(row) {
+  const listingPurpose = normalizeListingPurpose(row.listing_purpose);
+
   return {
     id: row.id,
     landlord_id: row.landlord_id,
     landlord_name: row.landlord_name,
     type: row.type,
+    listing_purpose: listingPurpose,
+    listing_purpose_label: getListingPurposeLabel(listingPurpose),
     description: row.description,
     location: row.location,
     price: Number(row.price),
@@ -47,6 +66,9 @@ function mapPropertyRow(row) {
     created_at: row.created_at,
     updated_at: row.updated_at,
     is_unlocked: Boolean(row.is_unlocked),
+    contact_fee_kobo: getContactUnlockFeeKobo(listingPurpose),
+    contact_fee_naira: getContactUnlockFeeNaira(listingPurpose),
+    contact_label: getContactPersonLabel(listingPurpose),
     phone: row.visible_phone || "",
     wa_link: row.visible_wa_link || ""
   };
@@ -54,7 +76,7 @@ function mapPropertyRow(row) {
 
 exports.createProperty = async (req, res, next) => {
   try {
-    const { type, description, location, price, phone } = req.body;
+    const { type, listing_purpose: listingPurposeValue, description, location, price, phone } = req.body;
     const images = req.files?.images || [];
     const video = req.files?.video?.[0];
 
@@ -71,16 +93,18 @@ exports.createProperty = async (req, res, next) => {
     }
 
     const whatsappLink = buildWhatsAppLink(phone);
+    const listingPurpose = normalizeListingPurpose(listingPurposeValue);
     const pool = getPool();
     const [result] = await pool.execute(
       `
         INSERT INTO properties
-          (landlord_id, type, description, location, price, phone, wa_link, images, video, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'available')
+          (landlord_id, type, listing_purpose, description, location, price, phone, wa_link, images, video, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available')
       `,
       [
         req.user.id,
         type.trim(),
+        listingPurpose,
         description.trim(),
         location.trim(),
         Number(price),
@@ -178,7 +202,7 @@ exports.markRented = async (req, res, next) => {
     const propertyId = Number(req.params.id);
     const pool = getPool();
     const [rows] = await pool.execute(
-      "SELECT id, landlord_id, status FROM properties WHERE id = ? LIMIT 1",
+      "SELECT id, landlord_id, status, listing_purpose FROM properties WHERE id = ? LIMIT 1",
       [propertyId]
     );
 
@@ -187,16 +211,21 @@ exports.markRented = async (req, res, next) => {
     }
 
     const property = rows[0];
+    const nextStatus = "rented";
 
     if (req.user.role !== "admin" && property.landlord_id !== req.user.id) {
       return res.status(403).json({ message: "You can only update your own properties." });
     }
 
-    if (property.status === "rented") {
+    if (normalizeListingPurpose(property.listing_purpose) === "sale") {
+      return res.status(400).json({ message: "Sale listings cannot be marked as rented." });
+    }
+
+    if (property.status === nextStatus) {
       return res.json({ message: "Property is already marked as rented." });
     }
 
-    await pool.execute("UPDATE properties SET status = 'rented' WHERE id = ?", [propertyId]);
+    await pool.execute("UPDATE properties SET status = ? WHERE id = ?", [nextStatus, propertyId]);
 
     req.app.get("io").emit("property_rented", {
       propertyId,
@@ -204,6 +233,74 @@ exports.markRented = async (req, res, next) => {
     });
 
     return res.json({ message: "Property marked as rented." });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.updatePropertyStatus = async (req, res, next) => {
+  try {
+    const propertyId = Number(req.params.id);
+    const nextStatus = normalizePropertyStatus(req.body.status);
+    const pool = getPool();
+    const [rows] = await pool.execute(
+      "SELECT id, landlord_id, status, listing_purpose, type, location, price FROM properties WHERE id = ? LIMIT 1",
+      [propertyId]
+    );
+
+    if (!propertyId) {
+      return res.status(400).json({ message: "A valid property id is required." });
+    }
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Property not found." });
+    }
+
+    const property = rows[0];
+    const listingPurpose = normalizeListingPurpose(property.listing_purpose);
+
+    if (req.user.role !== "admin" && property.landlord_id !== req.user.id) {
+      return res.status(403).json({ message: "You can only update your own properties." });
+    }
+
+    if (nextStatus === "rented" && listingPurpose === "sale") {
+      return res.status(400).json({ message: "Sale listings cannot be marked as rented." });
+    }
+
+    if (nextStatus === "sold" && listingPurpose !== "sale") {
+      return res.status(400).json({ message: "Only sale listings can be marked as sold." });
+    }
+
+    if (property.status === nextStatus) {
+      return res.json({ message: `Property is already marked as ${nextStatus}.` });
+    }
+
+    await pool.execute("UPDATE properties SET status = ? WHERE id = ?", [nextStatus, propertyId]);
+
+    if (nextStatus === "sold") {
+      await pool.execute(
+        `
+          INSERT INTO landlord_finance_records
+            (landlord_id, record_type, description, amount, payment_date)
+          VALUES (?, 'sale', ?, ?, CURDATE())
+        `,
+        [
+          property.landlord_id,
+          `${property.type} sale in ${property.location}`,
+          Number(property.price)
+        ]
+      );
+    }
+
+    req.app.get("io").emit("property_rented", {
+      propertyId,
+      message:
+        nextStatus === "sold"
+          ? "A property has been marked as sold."
+          : "A property has been marked as rented."
+    });
+
+    return res.json({ message: `Property marked as ${nextStatus}.` });
   } catch (error) {
     return next(error);
   }
