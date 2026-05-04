@@ -1,110 +1,216 @@
-import { motion } from "framer-motion";
-import Slider from "react-slick";
-import { FaStar, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { useState, useEffect } from "react";
+import { FiStar, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { getInitials, resolveMediaUrl } from "../../utils/media.js";
+import Reveal from "./Reveal.jsx";
 
-const TextTestimonialsSwiper = ({ testimonials }) => {
-  const settings = {
-    dots: true,
-    infinite: true,
-    speed: 500,
-    slidesToShow: 1,
-    slidesToScroll: 1,
-    autoplay: true,
-    autoplaySpeed: 5000,
-    arrows: true,
-    prevArrow: <CustomPrevArrow />,
-    nextArrow: <CustomNextArrow />,
-    responsive: [
-      {
-        breakpoint: 768,
-        settings: {
-          arrows: false
-        }
-      }
-    ]
+const placeholderTextTestimonials = [
+  {
+    id: "text-placeholder-1",
+    name: "Direct Renters",
+    role: "renter",
+    rating: 5,
+    textContent:
+      "The platform removes the biggest source of delay: waiting on middlemen before a real property conversation can start.",
+  },
+  {
+    id: "text-placeholder-2",
+    name: "Growth-Ready Landlords",
+    role: "landlord",
+    rating: 5,
+    textContent:
+      "A cleaner pipeline means faster decisions, easier listing management, and fewer loose ends when properties need attention.",
+  },
+  {
+    id: "text-placeholder-3",
+    name: "Booked Technicians",
+    role: "technician",
+    rating: 5,
+    textContent:
+      "Technicians get positioned as a real growth channel, not an afterthought, which makes the homepage pull its weight.",
+  },
+];
+
+function StarRow({ rating }) {
+  return (
+    <div className="homepage-star-row" aria-label={`${rating} out of 5 stars`}>
+      {Array.from({ length: 5 }, (_, index) => (
+        <FiStar key={index} className={index < rating ? "is-filled" : ""} />
+      ))}
+    </div>
+  );
+}
+
+function TestimonialSlide({ testimonial }) {
+  return (
+    <div className="homepage-slide">
+      <article className="homepage-text-card">
+        <StarRow rating={testimonial.rating || 5} />
+        <blockquote>{testimonial.textContent}</blockquote>
+        <div className="homepage-text-card-footer">
+          <div className="homepage-avatar">
+            {testimonial.avatarUrl ? (
+              <img
+                src={resolveMediaUrl(testimonial.avatarUrl)}
+                alt={testimonial.name}
+                loading="lazy"
+              />
+            ) : (
+              <span>{getInitials(testimonial.name)}</span>
+            )}
+          </div>
+          <div>
+            <strong>{testimonial.name}</strong>
+            <span>{testimonial.role}</span>
+          </div>
+        </div>
+      </article>
+    </div>
+  );
+}
+
+export default function TextTestimonialsSwiper({ testimonials, loading }) {
+  const items =
+    testimonials.length > 0 ? testimonials : placeholderTextTestimonials;
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAutoplayPaused, setIsAutoplayPaused] = useState(false);
+
+  const goToNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % items.length);
   };
 
-  const renderStars = (rating) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <FaStar
-        key={i}
-        className={`text-sm ${i < rating ? 'text-yellow-400' : 'text-gray-300'}`}
-      />
-    ));
+  const goToPrev = () => {
+    setCurrentIndex((prev) => (prev - 1 + items.length) % items.length);
   };
+
+  const goToSlide = (index) => {
+    setCurrentIndex(index);
+  };
+
+  // Autoplay functionality
+  useEffect(() => {
+    if (items.length <= 1 || isAutoplayPaused) return;
+
+    const interval = setInterval(goToNext, 5500);
+    return () => clearInterval(interval);
+  }, [items.length, isAutoplayPaused, currentIndex]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "ArrowLeft") goToPrev();
+      if (e.key === "ArrowRight") goToNext();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="homepage-section">
+        <div className="homepage-container">
+          <Reveal className="homepage-section-heading">
+            <p className="eyebrow">Text testimonials</p>
+            <h2 className="homepage-gradient-title">
+              What users remember after the click
+            </h2>
+            <p>
+              Trust compounds when the message is simple: faster connections,
+              less stress, and cleaner execution for everyone involved.
+            </p>
+          </Reveal>
+          <div className="homepage-text-slider-skeleton" />
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="py-20 px-6 bg-gradient-to-br from-surface via-surface-strong to-surface">
-      <div className="max-w-4xl mx-auto">
-        <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-accent to-accent-dark bg-clip-text text-transparent">
-            What Our Users Say
+    <section className="homepage-section">
+      <div className="homepage-container">
+        <Reveal className="homepage-section-heading">
+          <p className="eyebrow">Text testimonials</p>
+          <h2 className="homepage-gradient-title">
+            What users remember after the click
           </h2>
-          <p className="text-xl text-muted max-w-2xl mx-auto">
-            Join thousands of satisfied users who have found success on our platform.
+          <p>
+            Trust compounds when the message is simple: faster connections, less
+            stress, and cleaner execution for everyone involved.
           </p>
-        </motion.div>
+        </Reveal>
 
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
+        <div
+          className="homepage-text-slider-shell"
+          onMouseEnter={() => setIsAutoplayPaused(true)}
+          onMouseLeave={() => setIsAutoplayPaused(false)}
         >
-          <Slider {...settings} className="testimonial-slider">
-            {testimonials.map((testimonial) => (
-              <div key={testimonial.id} className="px-4">
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 md:p-12 shadow-lg border border-white/20 text-center">
-                  <div className="flex justify-center mb-6">
-                    {renderStars(testimonial.rating)}
-                  </div>
+          {/* Main slider container */}
+          <div
+            className="testimonial-slider"
+            role="region"
+            aria-label="Testimonials carousel"
+          >
+            {/* Current slide */}
+            <div className="testimonial-slider-track">
+              <TestimonialSlide testimonial={items[currentIndex]} />
+            </div>
 
-                  <blockquote className="text-lg md:text-xl text-text mb-8 italic leading-relaxed">
-                    "{testimonial.textContent}"
-                  </blockquote>
+            {/* Navigation arrows */}
+            {items.length > 1 && (
+              <>
+                <button
+                  className="homepage-slider-arrow left"
+                  onClick={goToPrev}
+                  aria-label="Previous testimonial"
+                >
+                  <FiChevronLeft />
+                </button>
+                <button
+                  className="homepage-slider-arrow right"
+                  onClick={goToNext}
+                  aria-label="Next testimonial"
+                >
+                  <FiChevronRight />
+                </button>
+              </>
+            )}
 
-                  <div className="flex flex-col items-center">
-                    {testimonial.avatarUrl && (
-                      <img
-                        src={testimonial.avatarUrl}
-                        alt={testimonial.name}
-                        className="w-16 h-16 rounded-full object-cover mb-4 border-2 border-accent/30"
-                      />
-                    )}
-                    <h3 className="text-xl font-semibold mb-1">{testimonial.name}</h3>
-                    <p className="text-accent capitalize">{testimonial.role}</p>
-                  </div>
-                </div>
+            {/* Dots indicator */}
+            {items.length > 1 && (
+              <div
+                className="slick-dots"
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: "0.5rem",
+                  marginTop: "1rem",
+                }}
+              >
+                {items.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToSlide(index)}
+                    aria-label={`Go to testimonial ${index + 1}`}
+                    style={{
+                      width: "10px",
+                      height: "10px",
+                      borderRadius: "50%",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      background:
+                        index === currentIndex
+                          ? "var(--accent)"
+                          : "rgba(89, 52, 24, 0.2)",
+                      transition: "background 0.2s ease",
+                    }}
+                  />
+                ))}
               </div>
-            ))}
-          </Slider>
-        </motion.div>
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );
-};
-
-const CustomPrevArrow = ({ onClick }) => (
-  <button
-    onClick={onClick}
-    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-all duration-200 shadow-lg"
-  >
-    <FaChevronLeft size={16} />
-  </button>
-);
-
-const CustomNextArrow = ({ onClick }) => (
-  <button
-    onClick={onClick}
-    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-all duration-200 shadow-lg"
-  >
-    <FaChevronRight size={16} />
-  </button>
-);
-
-export default TextTestimonialsSwiper;
+}

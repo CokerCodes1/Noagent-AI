@@ -41,15 +41,21 @@ export const adminSections = {
     icon: FiMessageSquare,
     path: "/admin/testimonials"
   },
-  revenue: {
+revenue: {
     title: "Revenue",
     subtitle: "Review all successful contact unlock transactions.",
     icon: FiDollarSign,
     path: "/admin/revenue"
+  },
+  loanRequests: {
+    title: "Loan Support Requests",
+    subtitle: "View and manage loan application submissions.",
+    icon: FiCreditCard,
+    path: "/admin/loan-requests"
   }
 };
 
-export const navOrder = ["dashboard", "users", "properties", "technicians", "testimonials", "revenue"];
+export const navOrder = ["dashboard", "users", "properties", "technicians", "testimonials", "revenue", "loanRequests"];
 
 export const emptyOverview = {
   stats: {
@@ -135,8 +141,16 @@ export function getCurrentSection(pathname) {
     return "technicians";
   }
 
-  if (pathname.startsWith("/admin/revenue")) {
+  if (pathname.startsWith("/admin/testimonials")) {
+    return "testimonials";
+  }
+
+if (pathname.startsWith("/admin/revenue")) {
     return "revenue";
+  }
+
+  if (pathname.startsWith("/admin/loan-requests")) {
+    return "loanRequests";
   }
 
   return "";

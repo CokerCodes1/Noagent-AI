@@ -1,135 +1,69 @@
-import { motion } from "framer-motion";
-import { FaFacebook, FaInstagram, FaTwitter, FaYoutube, FaTiktok } from "react-icons/fa";
+import { FiArrowUpRight } from "react-icons/fi";
+import { motion as Motion } from "framer-motion";
+import {
+  FaFacebookF,
+  FaInstagram,
+  FaTiktok,
+  FaXTwitter,
+  FaYoutube
+} from "react-icons/fa6";
+import { SITE_SOCIAL_LINKS } from "../../utils/siteConfig.js";
+import Reveal from "./Reveal.jsx";
+import { fadeInUp, staggerChildren } from "./homepageMotion.js";
 
-const SocialMediaSection = () => {
-  const socialPlatforms = [
-    {
-      name: "TikTok",
-      icon: <FaTiktok className="text-3xl" />,
-      color: "from-black to-gray-800",
-      textColor: "text-white",
-      description: "Watch property tours & success stories",
-      link: "https://tiktok.com/@noagentnaija"
-    },
-    {
-      name: "Facebook",
-      icon: <FaFacebook className="text-3xl" />,
-      color: "from-blue-600 to-blue-800",
-      textColor: "text-white",
-      description: "Join our community discussions",
-      link: "https://facebook.com/noagentnaija"
-    },
-    {
-      name: "Instagram",
-      icon: <FaInstagram className="text-3xl" />,
-      color: "from-pink-500 via-red-500 via-yellow-500 via-purple-500 via-blue-500 to-indigo-500",
-      textColor: "text-white",
-      description: "Beautiful property showcases",
-      link: "https://instagram.com/noagentnaija"
-    },
-    {
-      name: "X (Twitter)",
-      icon: <FaTwitter className="text-3xl" />,
-      color: "from-black to-gray-800",
-      textColor: "text-white",
-      description: "Real-time updates & tips",
-      link: "https://twitter.com/noagentnaija"
-    },
-    {
-      name: "YouTube",
-      icon: <FaYoutube className="text-3xl" />,
-      color: "from-red-600 to-red-800",
-      textColor: "text-white",
-      description: "In-depth tutorials & guides",
-      link: "https://youtube.com/@noagentnaija"
-    }
-  ];
+const iconMap = {
+  tiktok: FaTiktok,
+  facebook: FaFacebookF,
+  instagram: FaInstagram,
+  x: FaXTwitter,
+  youtube: FaYoutube
+};
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 50 },
-    visible: { opacity: 1, y: 0 }
-  };
-
-  const handleSocialClick = (link) => {
-    window.open(link, '_blank', 'noopener,noreferrer');
-  };
-
+export default function SocialMediaSection() {
   return (
-    <section className="py-20 px-6 bg-gradient-to-br from-surface via-surface-strong to-surface">
-      <div className="max-w-7xl mx-auto">
-        <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-accent to-accent-dark bg-clip-text text-transparent">
-            Follow Our Journey
-          </h2>
-          <p className="text-xl text-muted max-w-2xl mx-auto">
-            Stay connected and get the latest updates on properties, tips, and success stories from our community.
+    <section className="homepage-section homepage-section-dark">
+      <div className="homepage-container">
+        <Reveal className="homepage-section-heading">
+          <p className="eyebrow">Stay connected</p>
+          <h2 className="homepage-gradient-title">Follow the movement beyond the homepage</h2>
+          <p>
+            Every channel plays a different role in trust, discovery, and social proof. Keep the brand visible where your audience already lives.
           </p>
-        </motion.div>
+        </Reveal>
 
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6"
-          variants={containerVariants}
+        <Motion.div
+          className="homepage-social-grid"
+          variants={staggerChildren}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.16 }}
         >
-          {socialPlatforms.map((platform, index) => (
-            <motion.div
-              key={platform.name}
-              className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${platform.color} p-8 text-center cursor-pointer transform hover:scale-105 transition-all duration-500 shadow-lg hover:shadow-2xl`}
-              variants={itemVariants}
-              onClick={() => handleSocialClick(platform.link)}
-            >
-              <div className="relative z-10">
-                <div className={`${platform.textColor} mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                  {platform.icon}
-                </div>
-                <h3 className={`text-xl font-bold mb-3 ${platform.textColor}`}>
-                  {platform.name}
-                </h3>
-                <p className={`${platform.textColor} opacity-90 text-sm leading-relaxed`}>
-                  {platform.description}
-                </p>
-                <div className={`mt-4 text-sm font-medium ${platform.textColor} opacity-75 group-hover:opacity-100 transition-opacity`}>
-                  Follow Us →
-                </div>
-              </div>
+          {SITE_SOCIAL_LINKS.map((platform) => {
+            const Icon = iconMap[platform.key];
 
-              {/* Hover overlay */}
-              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            </motion.div>
-          ))}
-        </motion.div>
-
-        <motion.div
-          className="text-center mt-12"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.5 }}
-        >
-          <p className="text-muted">
-            Join our growing community across all platforms
-          </p>
-        </motion.div>
+            return (
+              <Motion.a
+                key={platform.key}
+                href={platform.href}
+                target="_blank"
+                rel="noreferrer"
+                className={`homepage-social-card ${platform.theme}`}
+                variants={fadeInUp}
+              >
+                <span className="homepage-social-icon">
+                  <Icon />
+                </span>
+                <strong>{platform.name}</strong>
+                <p>{platform.description}</p>
+                <span className="homepage-social-cta">
+                  {platform.shortLabel}
+                  <FiArrowUpRight />
+                </span>
+              </Motion.a>
+            );
+          })}
+        </Motion.div>
       </div>
     </section>
   );
-};
-
-export default SocialMediaSection;
+}

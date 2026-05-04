@@ -8,6 +8,7 @@ import PaymentSuccess from "./pages/PaymentSuccess.jsx";
 import RenterDashboard from "./pages/RenterDashboard.jsx";
 import TechnicianDashboard from "./pages/TechnicianDashboard.jsx";
 import WhatsAppFloatingButton from "./components/shared/WhatsAppFloatingButton.jsx";
+import SiteHeader from "./components/SiteHeader.jsx";
 import ProtectedRoute from "./routes/ProtectedRoute.jsx";
 
 const HomePage = lazy(() => import("./pages/HomePage.jsx"));
@@ -15,6 +16,7 @@ const HomePage = lazy(() => import("./pages/HomePage.jsx"));
 export default function App() {
   return (
     <BrowserRouter>
+      <SiteHeader />
       <Suspense fallback={<div className="app-fallback">Loading...</div>}>
         <Routes>
           <Route path="/" element={<HomePage />} />

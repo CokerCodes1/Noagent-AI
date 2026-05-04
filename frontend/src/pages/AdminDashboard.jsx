@@ -9,13 +9,14 @@ import AdminRevenueSection from "../components/admin/AdminRevenueSection.jsx";
 import AdminSidebar from "../components/admin/AdminSidebar.jsx";
 import AdminTestimonialsSection from "../components/admin/AdminTestimonialsSection.jsx";
 import AdminUsersSection from "../components/admin/AdminUsersSection.jsx";
+import AdminLoanRequestsSection from "../components/admin/AdminLoanRequestsSection.jsx";
 import {
   adminSections,
   emptyManagedPropertyForm,
   emptyManagedUserForm,
   emptyOverview,
   getCurrentSection,
-  roleLabel
+  roleLabel,
 } from "../components/admin/adminConfig.js";
 import { emptyTechnicianProfileForm } from "../components/technicians/technicianConfig.js";
 import DashboardHeader from "../components/DashboardHeader.jsx";
@@ -46,10 +47,11 @@ export default function AdminDashboard() {
   const [managedTechnicians, setManagedTechnicians] = useState([]);
   const [revenueSummary, setRevenueSummary] = useState({
     successfulTransactions: 0,
-    revenue: 0
+    revenue: 0,
   });
   const [transactions, setTransactions] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
+  const [loanRequests, setLoanRequests] = useState([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
   const [propertiesLoading, setPropertiesLoading] = useState(true);
@@ -62,17 +64,24 @@ export default function AdminDashboard() {
   const [techniciansError, setTechniciansError] = useState("");
   const [revenueError, setRevenueError] = useState("");
   const [testimonialsError, setTestimonialsError] = useState("");
+  const [loanRequestsLoading, setLoanRequestsLoading] = useState(true);
+  const [loanRequestsError, setLoanRequestsError] = useState("");
+  const [deletingRequestId, setDeletingRequestId] = useState(null);
   const [managedUserForm, setManagedUserForm] = useState(emptyManagedUserForm);
   const [editingUserId, setEditingUserId] = useState(null);
   const [submittingUser, setSubmittingUser] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [filterRole, setFilterRole] = useState("all");
-  const [managedPropertyForm, setManagedPropertyForm] = useState(emptyManagedPropertyForm);
+  const [managedPropertyForm, setManagedPropertyForm] = useState(
+    emptyManagedPropertyForm,
+  );
   const [editingPropertyId, setEditingPropertyId] = useState(null);
   const [submittingProperty, setSubmittingProperty] = useState(false);
   const [deletingPropertyId, setDeletingPropertyId] = useState(null);
   const [propertyFilter, setPropertyFilter] = useState("all");
-  const [technicianForm, setTechnicianForm] = useState(emptyTechnicianProfileForm);
+  const [technicianForm, setTechnicianForm] = useState(
+    emptyTechnicianProfileForm,
+  );
   const [editingTechnicianId, setEditingTechnicianId] = useState(null);
   const [submittingTechnician, setSubmittingTechnician] = useState(false);
   const [deletingTechnicianId, setDeletingTechnicianId] = useState(null);
@@ -89,16 +98,25 @@ export default function AdminDashboard() {
       setTechniciansLoading(true);
       setRevenueLoading(true);
       setTestimonialsLoading(true);
+      setLoanRequestsLoading(true);
 
-      const [overviewResult, usersResult, propertiesResult, techniciansResult, revenueResult, testimonialsResult] =
-        await Promise.allSettled([
-          api.get("/admin/overview"),
-          api.get("/admin/users"),
-          api.get("/admin/properties"),
-          api.get("/admin/technicians"),
-          api.get("/admin/revenue"),
-          api.get("/admin/testimonials")
-        ]);
+      const [
+        overviewResult,
+        usersResult,
+        propertiesResult,
+        techniciansResult,
+        revenueResult,
+        testimonialsResult,
+        loanRequestsResult,
+      ] = await Promise.allSettled([
+        api.get("/admin/overview"),
+        api.get("/admin/users"),
+        api.get("/admin/properties"),
+        api.get("/admin/technicians"),
+        api.get("/admin/revenue"),
+        api.get("/admin/testimonials"),
+        api.get("/admin/loan-requests"),
+      ]);
 
       if (!isMounted) {
         return;
@@ -122,14 +140,20 @@ export default function AdminDashboard() {
         setManagedProperties(propertiesResult.value.data);
         setPropertiesError("");
       } else {
-        handleDashboardRequestError(propertiesResult.reason, setPropertiesError);
+        handleDashboardRequestError(
+          propertiesResult.reason,
+          setPropertiesError,
+        );
       }
 
       if (techniciansResult.status === "fulfilled") {
         setManagedTechnicians(techniciansResult.value.data);
         setTechniciansError("");
       } else {
-        handleDashboardRequestError(techniciansResult.reason, setTechniciansError);
+        handleDashboardRequestError(
+          techniciansResult.reason,
+          setTechniciansError,
+        );
       }
 
       if (revenueResult.status === "fulfilled") {
@@ -144,7 +168,20 @@ export default function AdminDashboard() {
         setTestimonials(testimonialsResult.value.data.testimonials);
         setTestimonialsError("");
       } else {
-        handleDashboardRequestError(testimonialsResult.reason, setTestimonialsError);
+        handleDashboardRequestError(
+          testimonialsResult.reason,
+          setTestimonialsError,
+        );
+      }
+
+      if (loanRequestsResult.status === "fulfilled") {
+        setLoanRequests(loanRequestsResult.value.data.requests);
+        setLoanRequestsError("");
+      } else {
+        handleDashboardRequestError(
+          loanRequestsResult.reason,
+          setLoanRequestsError,
+        );
       }
 
       setDashboardLoading(false);
@@ -153,6 +190,7 @@ export default function AdminDashboard() {
       setTechniciansLoading(false);
       setRevenueLoading(false);
       setTestimonialsLoading(false);
+      setLoanRequestsLoading(false);
     }
 
     loadAdminData();
@@ -192,7 +230,7 @@ export default function AdminDashboard() {
                 : currentForm.status
               : currentForm.status === "sold"
                 ? "available"
-                : currentForm.status
+                : currentForm.status,
         };
       }
 
@@ -203,7 +241,8 @@ export default function AdminDashboard() {
   function resetManagedPropertyForm() {
     setManagedPropertyForm({ ...emptyManagedPropertyForm });
     setEditingPropertyId(null);
-    if (propertyImagesInputRef.current) propertyImagesInputRef.current.value = "";
+    if (propertyImagesInputRef.current)
+      propertyImagesInputRef.current.value = "";
     if (propertyVideoInputRef.current) propertyVideoInputRef.current.value = "";
   }
 
@@ -213,15 +252,17 @@ export default function AdminDashboard() {
       [field]: value,
       ...(field === "category" && value !== "Others"
         ? { custom_category: "" }
-        : {})
+        : {}),
     }));
   }
 
   function resetTechnicianForm() {
     setTechnicianForm({ ...emptyTechnicianProfileForm });
     setEditingTechnicianId(null);
-    if (technicianImagesInputRef.current) technicianImagesInputRef.current.value = "";
-    if (technicianVideoInputRef.current) technicianVideoInputRef.current.value = "";
+    if (technicianImagesInputRef.current)
+      technicianImagesInputRef.current.value = "";
+    if (technicianVideoInputRef.current)
+      technicianVideoInputRef.current.value = "";
   }
 
   async function handleManagedUserSubmit(event) {
@@ -235,7 +276,9 @@ export default function AdminDashboard() {
         toast.success("User updated successfully.");
       } else {
         await api.post("/admin/users", payload);
-        toast.success(`${roleLabel(managedUserForm.role)} created successfully.`);
+        toast.success(
+          `${roleLabel(managedUserForm.role)} created successfully.`,
+        );
       }
       resetManagedUserForm();
       refreshAdminData();
@@ -254,7 +297,7 @@ export default function AdminDashboard() {
       email: managedUser.email,
       phone: managedUser.phone || "",
       password: "",
-      role: managedUser.role
+      role: managedUser.role,
     });
   }
 
@@ -273,7 +316,7 @@ export default function AdminDashboard() {
         ? ` ${managedUser.unlocks_count} successful transaction record${managedUser.unlocks_count === 1 ? "" : "s"} will be removed too.`
         : "";
     const confirmed = window.confirm(
-      `Delete ${managedUser.name} (${managedUser.role})?${propertyNotice}${unlockNotice}`
+      `Delete ${managedUser.name} (${managedUser.role})?${propertyNotice}${unlockNotice}`,
     );
 
     if (!confirmed) return;
@@ -316,13 +359,21 @@ export default function AdminDashboard() {
 
     try {
       const formData = new FormData();
-      Object.entries(managedPropertyForm).forEach(([key, value]) => formData.append(key, value));
-      Array.from(selectedImages).forEach((file) => formData.append("images", file));
+      Object.entries(managedPropertyForm).forEach(([key, value]) =>
+        formData.append(key, value),
+      );
+      Array.from(selectedImages).forEach((file) =>
+        formData.append("images", file),
+      );
       if (selectedVideo) formData.append("video", selectedVideo);
 
       const config = { headers: { "Content-Type": "multipart/form-data" } };
       if (editingPropertyId) {
-        await api.put(`/admin/properties/${editingPropertyId}`, formData, config);
+        await api.put(
+          `/admin/properties/${editingPropertyId}`,
+          formData,
+          config,
+        );
         toast.success("Property updated successfully.");
       } else {
         await api.post("/admin/properties", formData, config);
@@ -349,15 +400,16 @@ export default function AdminDashboard() {
       location: property.location,
       price: String(property.price),
       phone: property.phone || "",
-      status: property.status || "available"
+      status: property.status || "available",
     });
-    if (propertyImagesInputRef.current) propertyImagesInputRef.current.value = "";
+    if (propertyImagesInputRef.current)
+      propertyImagesInputRef.current.value = "";
     if (propertyVideoInputRef.current) propertyVideoInputRef.current.value = "";
   }
 
   async function handleDeleteProperty(property) {
     const confirmed = window.confirm(
-      `Delete ${property.type} in ${property.location}? This will also remove related unlock records.`
+      `Delete ${property.type} in ${property.location}? This will also remove related unlock records.`,
     );
 
     if (!confirmed) return;
@@ -402,16 +454,24 @@ export default function AdminDashboard() {
         "whatsapp",
         "website",
         "jobs_completed",
-        "total_earnings"
+        "total_earnings",
       ];
 
-      fields.forEach((field) => formData.append(field, technicianForm[field] ?? ""));
-      Array.from(selectedImages).forEach((file) => formData.append("images", file));
+      fields.forEach((field) =>
+        formData.append(field, technicianForm[field] ?? ""),
+      );
+      Array.from(selectedImages).forEach((file) =>
+        formData.append("images", file),
+      );
       if (selectedVideo) formData.append("video", selectedVideo);
 
       const config = { headers: { "Content-Type": "multipart/form-data" } };
       if (editingTechnicianId) {
-        await api.put(`/admin/technicians/${editingTechnicianId}`, formData, config);
+        await api.put(
+          `/admin/technicians/${editingTechnicianId}`,
+          formData,
+          config,
+        );
         toast.success("Technician updated successfully.");
       } else {
         await api.post("/admin/technicians", formData, config);
@@ -448,16 +508,20 @@ export default function AdminDashboard() {
       video_url: technician.video_url || "",
       jobs_completed: String(technician.jobs_completed ?? 0),
       total_earnings: String(technician.total_earnings ?? 0),
-      existing_images: Array.isArray(technician.images) ? technician.images : [],
-      current_video_url: technician.video_url || ""
+      existing_images: Array.isArray(technician.images)
+        ? technician.images
+        : [],
+      current_video_url: technician.video_url || "",
     });
-    if (technicianImagesInputRef.current) technicianImagesInputRef.current.value = "";
-    if (technicianVideoInputRef.current) technicianVideoInputRef.current.value = "";
+    if (technicianImagesInputRef.current)
+      technicianImagesInputRef.current.value = "";
+    if (technicianVideoInputRef.current)
+      technicianVideoInputRef.current.value = "";
   }
 
   async function handleDeleteTechnician(technician) {
     const confirmed = window.confirm(
-      `Delete ${technician.name}? This will remove the technician account and marketplace profile.`
+      `Delete ${technician.name}? This will remove the technician account and marketplace profile.`,
     );
 
     if (!confirmed) return;
@@ -476,13 +540,35 @@ export default function AdminDashboard() {
     }
   }
 
+  async function handleDeleteRequest(request) {
+    const confirmed = window.confirm(
+      `Delete loan request from ${request.name}? This action cannot be undone.`,
+    );
+
+    if (!confirmed) return;
+
+    setDeletingRequestId(request.id);
+    try {
+      await api.delete(`/admin/loan-requests/${request.id}`);
+      toast.success("Loan request deleted successfully.");
+      refreshAdminData();
+    } catch (requestError) {
+      toast.error(extractErrorMessage(requestError));
+      if (requestError.response?.status === 401) clearAuthSession();
+    } finally {
+      setDeletingRequestId(null);
+    }
+  }
+
   const filteredUsers = managedUsers.filter((managedUser) =>
-    filterRole === "all" ? true : managedUser.role === filterRole
+    filterRole === "all" ? true : managedUser.role === filterRole,
   );
   const filteredProperties = managedProperties.filter((property) =>
-    propertyFilter === "all" ? true : property.status === propertyFilter
+    propertyFilter === "all" ? true : property.status === propertyFilter,
   );
-  const landlords = managedUsers.filter((managedUser) => managedUser.role === "landlord");
+  const landlords = managedUsers.filter(
+    (managedUser) => managedUser.role === "landlord",
+  );
   const section = adminSections[activeSection];
 
   return (
@@ -593,6 +679,17 @@ export default function AdminDashboard() {
                 revenueLoading={revenueLoading}
                 revenueSummary={revenueSummary}
                 transactions={transactions}
+              />
+            ) : null}
+
+            {activeSection === "loanRequests" ? (
+              <AdminLoanRequestsSection
+                loanRequests={loanRequests}
+                loanRequestsError={loanRequestsError}
+                loanRequestsLoading={loanRequestsLoading}
+                refreshAdminData={refreshAdminData}
+                deletingRequestId={deletingRequestId}
+                handleDeleteRequest={handleDeleteRequest}
               />
             ) : null}
           </section>

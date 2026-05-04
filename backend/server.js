@@ -52,19 +52,41 @@ async function startServer() {
   app.use("/api/payment", require("./routes/payment"));
   app.use("/api/admin", require("./routes/admin"));
   app.use("/api/admin/technicians", require("./routes/adminTechnicians"));
-  app.use("/api/technicians", require("./routes/technician"));
+app.use("/api/technicians", require("./routes/technician"));
+  app.use("/api/loan-support", require("./routes/loanSupport"));
 
   // Public testimonials endpoint
   app.get("/api/testimonials", async (req, res, next) => {
     try {
       const { getPool } = require("./config/db");
       const pool = getPool();
+      const requestedLimit = Number(req.query.limit);
+      const limit = Number.isFinite(requestedLimit)
+        ? Math.min(Math.max(Math.trunc(requestedLimit), 1), 24)
+        : 12;
+      const filters = [];
+
+      if (req.query.video === "true") {
+        filters.push("NULLIF(TRIM(video_url), '') IS NOT NULL");
+      }
+
+      if (req.query.text === "true") {
+        filters.push("NULLIF(TRIM(text_content), '') IS NOT NULL");
+      }
+
+      const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
       const [rows] = await pool.execute(
-        "SELECT id, name, role, video_url, avatar_url, rating, text_content, created_at FROM testimonials ORDER BY created_at DESC LIMIT 6"
+        `
+          SELECT id, name, role, video_url, avatar_url, rating, text_content, created_at
+          FROM testimonials
+          ${whereClause}
+          ORDER BY created_at DESC
+          LIMIT ${limit}
+        `
       );
 
       return res.json({
-        testimonials: rows.map(row => ({
+        testimonials: rows.map((row) => ({
           id: row.id,
           name: row.name,
           role: row.role,

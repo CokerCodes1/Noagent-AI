@@ -28,7 +28,10 @@ const upload = multer({
     fileSize: 50 * 1024 * 1024
   },
   fileFilter: (req, file, cb) => {
-    if (file.fieldname === "images" && file.mimetype.startsWith("image/")) {
+    if (
+      (file.fieldname === "images" || file.fieldname === "avatar") &&
+      file.mimetype.startsWith("image/")
+    ) {
       return cb(null, true);
     }
 
@@ -36,7 +39,9 @@ const upload = multer({
       return cb(null, true);
     }
 
-    return cb(new Error("Only image files for images and video files for video are allowed."));
+    return cb(
+      new Error("Only image files for images/avatar and video files for video are allowed.")
+    );
   }
 });
 

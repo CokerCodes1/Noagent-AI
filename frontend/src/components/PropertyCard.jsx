@@ -103,9 +103,6 @@ export default function PropertyCard({ property, onPaymentStateChange }) {
 
         <div className="listing-tag-row">
           <span className={`pill ${property.listing_purpose || "rent"}`}>{listingPurposeLabel}</span>
-          <p className="property-fee-note">
-            Contact {contactLabel} fee: {formatNaira(contactFee)}
-          </p>
         </div>
 
         <p className="property-description">{property.description}</p>

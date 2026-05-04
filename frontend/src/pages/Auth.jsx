@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import { FiKey, FiLock, FiMail, FiPhone, FiUser, FiX } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import api, { extractErrorMessage } from "../api/axios.js";
 import { getDashboardPath, setAuthSession } from "../utils/session.js";
@@ -48,6 +48,7 @@ function AuthField(props) {
 
 export default function Auth() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState("login");
   const [accountRole, setAccountRole] = useState("renter");
   const [form, setForm] = useState(initialForm);
@@ -62,6 +63,31 @@ export default function Auth() {
   const roleOptions = isSignup ? signupRoleOptions : loginRoleOptions;
   const isTechnicianSelection = accountRole === "technician";
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const requestedMode = searchParams.get("mode");
+    const requestedRole = searchParams.get("role");
+
+    if (requestedMode === "signup" || requestedMode === "login") {
+      setMode(requestedMode);
+    }
+
+    if (requestedMode === "signup") {
+      setAccountRole(requestedRole === "technician" ? "technician" : "renter");
+      return;
+    }
+
+    if (requestedMode === "login") {
+      if (requestedRole === "technician") {
+        setAccountRole("technician");
+      } else if (requestedRole === "property_manager") {
+        setAccountRole("property_manager");
+      } else {
+        setAccountRole("renter");
+      }
+    }
+  }, [location.search]);
 
   function updateField(field, value) {
     setForm((currentForm) => ({

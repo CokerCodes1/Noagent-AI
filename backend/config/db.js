@@ -249,7 +249,7 @@ async function initDatabase() {
     MODIFY COLUMN amount_paid INT NOT NULL COMMENT 'Stored in kobo. Rent: ${RENT_CONTACT_FEE_KOBO}, Sale: ${SALE_CONTACT_FEE_KOBO}'
   `);
 
-  await activePool.query(`
+await activePool.query(`
     CREATE TABLE IF NOT EXISTS testimonials (
       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
       name VARCHAR(120) NOT NULL,
@@ -260,6 +260,23 @@ async function initDatabase() {
       text_content TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+
+  await activePool.query(`
+    CREATE TABLE IF NOT EXISTS loan_support_requests (
+      id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      loan_type ENUM('land_acquisition', 'building_project', 'house_rent') NOT NULL,
+      name VARCHAR(120) NOT NULL,
+      phone VARCHAR(25) NOT NULL,
+      address VARCHAR(255) NOT NULL DEFAULT '',
+      occupation VARCHAR(120) NOT NULL DEFAULT '',
+      monthly_income DECIMAL(12, 2) NOT NULL DEFAULT 0,
+      landlord_name VARCHAR(120) NOT NULL DEFAULT '',
+      landlord_phone VARCHAR(25) NOT NULL DEFAULT '',
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_loan_type (loan_type),
+      INDEX idx_loan_created (created_at)
     )
   `);
 

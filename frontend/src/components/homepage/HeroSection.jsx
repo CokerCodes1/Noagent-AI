@@ -1,122 +1,196 @@
+import { motion as Motion } from "framer-motion";
+import { useEffect, useEffectEvent, useRef } from "react";
+import { FiArrowRight, FiPlayCircle, FiTool } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
+import { fadeInUp, staggerChildren } from "./homepageMotion.js";
+import { resolveMediaUrl } from "../../utils/media.js";
+import { HOMEPAGE_MEDIA } from "../../utils/siteConfig.js";
+import Reveal from "./Reveal.jsx";
 
-const HeroSection = () => {
+const heroHighlights = [
+  "Direct landlord access",
+  "Verified renters",
+  "Technician demand on standby",
+];
+
+const heroStats = [
+  {
+    value: "Zero agent fees",
+    label: "Rent directly from verified landlords and escape costly agent fees.",
+  },
+  {
+    value: "One platform",
+    label: "Landlords, tenants, and technicians meet in one trusted flow.",
+  },
+  {
+    value: "Mobile first",
+    label: "Fast, clean actions for signups, listings, and service requests.",
+  },
+];
+
+export default function HeroSection() {
   const navigate = useNavigate();
+  const heroVideoRef = useRef(null);
 
-  const handleGetStarted = () => {
-    navigate("/auth?mode=signup");
-  };
+  const keepHeroVideoPlaying = useEffectEvent(() => {
+    const video = heroVideoRef.current;
 
-  const handleLogin = () => {
-    navigate("/auth?mode=login");
-  };
+    if (!video || document.hidden) {
+      return;
+    }
 
-  const handleJoinTechnician = () => {
-    navigate("/auth?mode=signup");
-  };
+    const playPromise = video.play();
+
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {});
+    }
+  });
+
+  useEffect(() => {
+    const video = heroVideoRef.current;
+
+    if (!video) {
+      return undefined;
+    }
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        keepHeroVideoPlaying();
+      }
+    };
+
+    const handleVideoLoop = () => {
+      video.currentTime = 0;
+      keepHeroVideoPlaying();
+    };
+
+    keepHeroVideoPlaying();
+
+    video.addEventListener("canplay", keepHeroVideoPlaying);
+    video.addEventListener("waiting", keepHeroVideoPlaying);
+    video.addEventListener("stalled", keepHeroVideoPlaying);
+    video.addEventListener("suspend", keepHeroVideoPlaying);
+    video.addEventListener("pause", keepHeroVideoPlaying);
+    video.addEventListener("ended", handleVideoLoop);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      video.removeEventListener("canplay", keepHeroVideoPlaying);
+      video.removeEventListener("waiting", keepHeroVideoPlaying);
+      video.removeEventListener("stalled", keepHeroVideoPlaying);
+      video.removeEventListener("suspend", keepHeroVideoPlaying);
+      video.removeEventListener("pause", keepHeroVideoPlaying);
+      video.removeEventListener("ended", handleVideoLoop);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [keepHeroVideoPlaying]);
 
   return (
-    <section style={{
-      position: 'relative',
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden',
-      background: 'linear-gradient(135deg, rgba(184, 92, 56, 0.2) 0%, rgba(152, 67, 37, 0.3) 100%)'
-    }}>
-      {/* Overlay */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 100%)'
-      }}></div>
+    <section className="homepage-hero">
+      <video
+        ref={heroVideoRef}
+        className="homepage-hero-video"
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        aria-hidden="true"
+        poster={resolveMediaUrl(HOMEPAGE_MEDIA.heroPoster)}
+      >
+        <source src={HOMEPAGE_MEDIA.heroVideo} type="video/mp4" />
+      </video>
+      <div className="homepage-hero-overlay" />
 
-      {/* Content */}
-      <div style={{
-        position: 'relative',
-        zIndex: 10,
-        textAlign: 'center',
-        padding: '0 1.5rem',
-        maxWidth: '64rem',
-        margin: '0 auto',
-        color: 'white'
-      }}>
-        <h1 style={{
-          fontSize: 'clamp(3rem, 8vw, 7rem)',
-          fontWeight: 'bold',
-          marginBottom: '1.5rem',
-          background: 'linear-gradient(to right, white, #ffd4b8, white)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text'
-        }}>
-          No Agents. Just Direct Connections.
-        </h1>
-
-        <p style={{
-          fontSize: 'clamp(1.25rem, 4vw, 2rem)',
-          marginBottom: '2rem',
-          maxWidth: '42rem',
-          margin: '0 auto 2rem'
-        }}>
-          Connect directly with landlords, renters, and skilled technicians in Nigeria.
-          Skip the middleman and save time & money.
-        </p>
-
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: '3rem'
-        }}>
-          <button
-            onClick={handleGetStarted}
-            style={{
-              padding: '1rem 2rem',
-              backgroundColor: '#b85c38',
-              color: '#fff6f1',
-              border: 'none',
-              borderRadius: '50px',
-              fontSize: '1.125rem',
-              cursor: 'pointer',
-              transition: 'transform 0.2s ease',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-            }}
-            onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
-            onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+      <div className="homepage-hero-inner">
+        <div className="homepage-hero-content">
+          <Motion.div
+            className="homepage-hero-copy"
+            variants={staggerChildren}
+            initial="hidden"
+            animate="visible"
           >
-            Get Started
-          </button>
-          <button
-            onClick={handleLogin}
-            style={{
-              padding: '1rem 2rem',
-              backgroundColor: 'transparent',
-              color: 'white',
-              border: '2px solid rgba(255,255,255,0.3)',
-              borderRadius: '50px',
-              fontSize: '1.125rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.backgroundColor = 'rgba(255,255,255,0.1)';
-              e.target.style.transform = 'scale(1.05)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.backgroundColor = 'transparent';
-              e.target.style.transform = 'scale(1)';
-            }}
-          >
-            Login
-          </button>
+            <Motion.div className="homepage-hero-pills" variants={fadeInUp}>
+              {heroHighlights.map((item) => (
+                <span key={item} className="homepage-pill">
+                  {item}
+                </span>
+              ))}
+            </Motion.div>
+
+            <Motion.p className="homepage-kicker" variants={fadeInUp}>
+              NoAgentNaija Premium Access
+            </Motion.p>
+
+            <Motion.h1 className="homepage-gradient-title" variants={fadeInUp}>
+              No Agents. Just Direct Transactions.
+            </Motion.h1>
+
+            <Motion.h2 className="homepage-hero-subtitle" variants={fadeInUp}>
+              For landlords renting faster, tenants finding homes cheaper, and
+              technicians turning skill into daily income.
+            </Motion.h2>
+
+            <Motion.p className="homepage-hero-description" variants={fadeInUp}>
+              NoAgentNaija helps people connect directly across rentals,
+              property operations, and trusted repairs. No friction, no inflated
+              commissions, and no wasted back-and-forth before the real
+              conversation begins.
+            </Motion.p>
+
+            <Motion.div className="homepage-hero-actions" variants={fadeInUp}>
+              <button
+                type="button"
+                className="btn primary homepage-cta-primary"
+                onClick={() => navigate("/auth?mode=signup")}
+              >
+                <FiArrowRight />
+                Get Started
+              </button>
+              <button
+                type="button"
+                className="btn secondary homepage-cta-secondary"
+                onClick={() => navigate("/auth?mode=login")}
+              >
+                <FiPlayCircle />
+                Login
+              </button>
+              <button
+                type="button"
+                className="btn secondary homepage-cta-secondary"
+                onClick={() => navigate("/auth?mode=signup&role=technician")}
+              >
+                <FiTool />
+                Join as Technician
+              </button>
+            </Motion.div>
+          </Motion.div>
+
+          <Reveal className="homepage-hero-panel">
+            <div className="homepage-hero-panel-card">
+              <p className="eyebrow">Built for conversion</p>
+              <h3>Move from discovery to direct action in minutes.</h3>
+              <div className="homepage-hero-stats">
+                {heroStats.map((stat) => (
+                  <article key={stat.value} className="homepage-hero-stat-card">
+                    <strong>{stat.value}</strong>
+                    <p>{stat.label}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </Reveal>
         </div>
+
+        <a
+          href="#homepage-testimonials"
+          className="homepage-scroll-indicator"
+          aria-label="Scroll to testimonials"
+        >
+          <span />
+          <small>Scroll</small>
+        </a>
       </div>
     </section>
   );
-};
-
-export default HeroSection;
+}

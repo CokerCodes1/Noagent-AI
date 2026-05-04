@@ -15,7 +15,7 @@ export function getContactFeeNaira(property = {}) {
     return Number(property.contact_fee_naira);
   }
 
-  return normalizeListingPurpose(property.listing_purpose) === "sale" ? 10000 : 1000;
+  return normalizeListingPurpose(property.listing_purpose) === "sale" ? 10000 : 2000;
 }
 
 export function formatNaira(amount = 0) {

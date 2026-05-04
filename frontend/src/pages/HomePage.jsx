@@ -1,39 +1,95 @@
-import { useEffect, useState } from "react";
-import axios from "../api/axios";
-import HeroSection from "../components/homepage/HeroSection";
-import RentersSection from "../components/homepage/RentersSection";
-import LandlordsSection from "../components/homepage/LandlordsSection";
-import TechniciansSection from "../components/homepage/TechniciansSection";
-import Footer from "../components/homepage/Footer";
-import WhatsAppFloatingButton from "../components/shared/WhatsAppFloatingButton";
+import { Suspense, lazy, useEffect, useState } from "react";
+import api from "../api/axios.js";
+import HeroSection from "../components/homepage/HeroSection.jsx";
+import LoanSupportSection from "../components/homepage/LoanSupportSection.jsx";
+import TextTestimonialsSwiper from "../components/homepage/TextTestimonialsSwiper.jsx";
 
-const HomePage = () => {
+const VideoTestimonials = lazy(
+  () => import("../components/homepage/VideoTestimonials.jsx"),
+);
+const RentersSection = lazy(
+  () => import("../components/homepage/RentersSection.jsx"),
+);
+const LandlordsSection = lazy(
+  () => import("../components/homepage/LandlordsSection.jsx"),
+);
+const TechniciansSection = lazy(
+  () => import("../components/homepage/TechniciansSection.jsx"),
+);
+const SocialMediaSection = lazy(
+  () => import("../components/homepage/SocialMediaSection.jsx"),
+);
+const Footer = lazy(() => import("../components/homepage/Footer.jsx"));
+
+function SectionFallback() {
+  return <div className="homepage-section-fallback" aria-hidden="true" />;
+}
+
+export default function HomePage() {
   const [testimonials, setTestimonials] = useState([]);
+  const [testimonialsLoaded, setTestimonialsLoaded] = useState(false);
 
   useEffect(() => {
-    const fetchTestimonials = async () => {
+    let isMounted = true;
+
+    async function fetchTestimonials() {
       try {
-        const response = await axios.get("/api/testimonials");
-        setTestimonials(response.data.testimonials || []);
-      } catch (error) {
-        console.error("Failed to fetch testimonials:", error);
-        setTestimonials([]);
+        const response = await api.get("/testimonials?limit=18");
+
+        if (!isMounted) {
+          return;
+        }
+
+        setTestimonials(
+          Array.isArray(response.data.testimonials)
+            ? response.data.testimonials
+            : [],
+        );
+      } catch {
+        if (isMounted) {
+          setTestimonials([]);
+        }
+      } finally {
+        if (isMounted) {
+          setTestimonialsLoaded(true);
+        }
       }
-    };
+    }
 
     fetchTestimonials();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
+  const videoTestimonials = testimonials
+    .filter((testimonial) => testimonial.videoUrl)
+    .slice(0, 6);
+  const textTestimonials = testimonials
+    .filter((testimonial) => testimonial.textContent)
+    .slice(0, 8);
+
   return (
-    <div className="min-h-screen">
+    <div className="homepage-shell">
       <HeroSection />
-      <RentersSection />
-      <LandlordsSection />
-      <TechniciansSection />
-      <Footer />
-      <WhatsAppFloatingButton />
+
+      <Suspense fallback={<SectionFallback />}>
+        <VideoTestimonials
+          testimonials={videoTestimonials}
+          loading={!testimonialsLoaded}
+        />
+        <TextTestimonialsSwiper
+          testimonials={textTestimonials}
+          loading={!testimonialsLoaded}
+        />
+        <RentersSection />
+        <LandlordsSection />
+        <TechniciansSection />
+        <SocialMediaSection />
+        <LoanSupportSection />
+        <Footer />
+      </Suspense>
     </div>
   );
-};
-
-export default HomePage;
+}

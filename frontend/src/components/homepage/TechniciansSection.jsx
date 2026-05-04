@@ -1,223 +1,111 @@
+import { motion as Motion } from "framer-motion";
+import { FiAward, FiBriefcase, FiTrendingUp, FiZap } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import { FaTools, FaHandshake, FaStar, FaClock } from "react-icons/fa";
-import { technicianCategories } from "../../utils/technicianCategories";
+import { HOMEPAGE_MEDIA } from "../../utils/siteConfig.js";
+import { technicianCategories } from "../../utils/technicianCategories.js";
+import Reveal from "./Reveal.jsx";
+import { fadeInUp, staggerChildren } from "./homepageMotion.js";
 
-const TechniciansSection = () => {
+const technicianBenefits = [
+  {
+    icon: FiBriefcase,
+    title: "Turn visibility into jobs",
+    description: "Get discovered by landlords and renters already inside the NoAgentNaija flow."
+  },
+  {
+    icon: FiAward,
+    title: "Build a stronger profile",
+    description: "Showcase your work, ratings, and service value with a profile designed to convert trust."
+  },
+  {
+    icon: FiTrendingUp,
+    title: "Create repeat income",
+    description: "Let daily service demand compound into a more stable stream of opportunities."
+  },
+  {
+    icon: FiZap,
+    title: "Move faster on mobile",
+    description: "Respond, update, and stay visible without needing a complicated workflow."
+  }
+];
+
+export default function TechniciansSection() {
   const navigate = useNavigate();
 
-  const handleJoinTechnician = () => {
-    navigate("/auth?mode=signup");
-  };
-
-  const benefits = [
-    {
-      icon: <FaHandshake style={{ fontSize: '1.5rem' }} />,
-      title: "Direct Client Connections",
-      description: "Connect directly with customers without platform fees or commissions."
-    },
-    {
-      icon: <FaStar style={{ fontSize: '1.5rem' }} />,
-      title: "Build Your Reputation",
-      description: "Earn reviews and ratings that help you attract more clients."
-    },
-    {
-      icon: <FaClock style={{ fontSize: '1.5rem' }} />,
-      title: "Flexible Schedule",
-      description: "Work on your own terms and manage your availability."
-    },
-    {
-      icon: <FaTools style={{ fontSize: '1.5rem' }} />,
-      title: "Showcase Your Skills",
-      description: "Create detailed profiles with photos, videos, and service descriptions."
-    }
-  ];
-
   return (
-    <section style={{
-      padding: '5rem 1.5rem',
-      background: 'var(--surface, #fff8ef)'
-    }}>
-      <div style={{
-        maxWidth: '80rem',
-        margin: '0 auto'
-      }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr',
-          gap: '4rem',
-          alignItems: 'center'
-        }}>
-          {/* Content */}
-          <div>
-            <h2 style={{
-              fontSize: 'clamp(2rem, 5vw, 3rem)',
-              fontWeight: 'bold',
-              marginBottom: '1.5rem',
-              background: 'linear-gradient(to right, #b85c38, #8f4325)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
-              Turn Your Skill Into Daily Income
-            </h2>
-            <p style={{
-              fontSize: '1.25rem',
-              color: 'var(--muted, #5a4330)',
-              marginBottom: '2rem',
-              lineHeight: 1.6
-            }}>
-              Join thousands of skilled professionals earning steady income.
-              Connect directly with customers and build your business on Nigeria's largest service marketplace.
-            </p>
+    <section className="homepage-section">
+      <div className="homepage-container homepage-split-section">
+        <Motion.div
+          className="homepage-copy-stack"
+          variants={staggerChildren}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+        >
+          <Motion.p className="eyebrow" variants={fadeInUp}>
+            For technicians
+          </Motion.p>
+          <Motion.h2 className="homepage-gradient-title" variants={fadeInUp}>
+            Turn Your Skill Into Daily Income
+          </Motion.h2>
+          <Motion.p className="homepage-section-copy" variants={fadeInUp}>
+            Skilled professionals deserve more than random referrals. NoAgentNaija helps you become visible where real property and service demand already exists.
+          </Motion.p>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-              gap: '1.5rem',
-              marginBottom: '2.5rem'
-            }}>
-              {benefits.map((benefit, index) => (
-                <div key={index} style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '1rem',
-                  padding: '1.5rem',
-                  borderRadius: '0.75rem',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  transition: 'all 0.3s ease'
-                }}>
-                  <div style={{ color: '#b85c38', marginTop: '0.25rem' }}>
-                    {benefit.icon}
-                  </div>
+          <Motion.div className="homepage-highlight-column" variants={staggerChildren}>
+            {technicianBenefits.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <Motion.article key={item.title} className="homepage-highlight-row" variants={fadeInUp}>
+                  <span className="homepage-feature-icon">
+                    <Icon />
+                  </span>
                   <div>
-                    <h3 style={{
-                      fontWeight: '600',
-                      marginBottom: '0.5rem',
-                      fontSize: '1.1rem'
-                    }}>
-                      {benefit.title}
-                    </h3>
-                    <p style={{
-                      color: 'var(--muted, #5a4330)',
-                      fontSize: '0.9rem',
-                      lineHeight: 1.5
-                    }}>
-                      {benefit.description}
-                    </p>
+                    <h3>{item.title}</h3>
+                    <p>{item.description}</p>
                   </div>
-                </div>
-              ))}
-            </div>
+                </Motion.article>
+              );
+            })}
+          </Motion.div>
 
+          <Motion.div variants={fadeInUp}>
             <button
-              onClick={handleJoinTechnician}
-              style={{
-                padding: '1rem 2rem',
-                backgroundColor: '#b85c38',
-                color: '#fff6f1',
-                border: 'none',
-                borderRadius: '50px',
-                fontSize: '1.125rem',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                boxShadow: '0 4px 12px rgba(184, 92, 56, 0.3)'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.transform = 'scale(1.05)';
-                e.target.style.boxShadow = '0 6px 20px rgba(184, 92, 56, 0.4)';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.transform = 'scale(1)';
-                e.target.style.boxShadow = '0 4px 12px rgba(184, 92, 56, 0.3)';
-              }}
+              type="button"
+              className="btn primary"
+              onClick={() => navigate("/auth?mode=signup&role=technician")}
             >
               Join as Technician
             </button>
-          </div>
+          </Motion.div>
+        </Motion.div>
 
-          {/* Categories Showcase */}
-          <div style={{
-            position: 'relative'
-          }}>
-            <div style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '1rem',
-              padding: '2rem',
-              border: '1px solid rgba(255, 255, 255, 0.2)'
-            }}>
-              <h3 style={{
-                fontSize: '1.5rem',
-                fontWeight: 'bold',
-                marginBottom: '1.5rem',
-                textAlign: 'center'
-              }}>
-                Popular Categories
-              </h3>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                gap: '1rem'
-              }}>
-                {technicianCategories.slice(0, 12).map((category, index) => (
-                  <div key={category} style={{
-                    backgroundColor: 'rgba(184, 92, 56, 0.1)',
-                    borderRadius: '0.5rem',
-                    padding: '1rem',
-                    textAlign: 'center',
-                    transition: 'all 0.3s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseOver={(e) => {
-                    e.target.style.backgroundColor = 'rgba(184, 92, 56, 0.2)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.backgroundColor = 'rgba(184, 92, 56, 0.1)';
-                  }}>
-                    <div style={{
-                      color: '#b85c38',
-                      fontWeight: '500',
-                      fontSize: '0.875rem'
-                    }}>
-                      {category}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-                <span style={{
-                  color: 'var(--muted, #5a4330)',
-                  fontSize: '0.875rem'
-                }}>
-                  And 50+ more categories...
-                </span>
-              </div>
-            </div>
-
-            <div style={{
-              position: 'absolute',
-              bottom: '-1.5rem',
-              left: '-1.5rem',
-              backgroundColor: '#2f7a53',
-              color: 'white',
-              padding: '1.5rem',
-              borderRadius: '1rem',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-            }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                15K+
-              </div>
-              <div style={{ fontSize: '0.875rem', opacity: 0.9 }}>
-                Active Technicians
-              </div>
+        <Reveal className="homepage-category-panel">
+          <div className="homepage-media-card">
+            <img
+              src={HOMEPAGE_MEDIA.techniciansImage}
+              alt="Technician at work"
+              loading="lazy"
+            />
+            <div className="homepage-floating-metric">
+              <strong>Showcase Your Expertise</strong>
+              <span>Highlight your services and connect with property owners and renters who need skilled help now.</span>
             </div>
           </div>
-        </div>
+          <div className="homepage-category-grid">
+            {technicianCategories.slice(0, 12).map((category) => (
+              <span key={category} className="homepage-category-chip">
+                {category}
+              </span>
+            ))}
+          </div>
+          <div className="homepage-category-footer">
+            <strong>Popular categories</strong>
+            <p>Electricians, plumbers, tilers, painters, dispatch riders, fashion designers, and more.</p>
+          </div>
+        </Reveal>
       </div>
     </section>
   );
-};
-
-export default TechniciansSection;
+}

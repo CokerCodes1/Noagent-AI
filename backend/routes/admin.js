@@ -73,6 +73,32 @@ function normalizePropertyStatus(status = "") {
   return status === "rented" ? "rented" : "available";
 }
 
+function normalizeTestimonialRole(role = "") {
+  if (role === "landlord") {
+    return "landlord";
+  }
+
+  if (role === "technician") {
+    return "technician";
+  }
+
+  return "renter";
+}
+
+function normalizeRating(rating) {
+  const parsedRating = Number(rating);
+
+  if (!Number.isFinite(parsedRating)) {
+    return 5;
+  }
+
+  return Math.min(5, Math.max(1, Math.round(parsedRating)));
+}
+
+function buildUploadPath(filename = "") {
+  return filename ? `/uploads/${filename}` : "";
+}
+
 function parseImages(images) {
   try {
     const parsed = JSON.parse(images || "[]");
@@ -141,6 +167,19 @@ function mapRevenueRow(row) {
     landlord_id: row.landlord_id,
     landlord_name: row.landlord_name || "",
     landlord_email: row.landlord_email || ""
+  };
+}
+
+function mapTestimonial(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    role: row.role,
+    videoUrl: row.video_url,
+    avatarUrl: row.avatar_url,
+    rating: Number(row.rating || 5),
+    textContent: row.text_content,
+    createdAt: row.created_at
   };
 }
 
@@ -960,91 +999,129 @@ router.get("/testimonials", verifyToken, authorizeRoles("admin"), async (req, re
     );
 
     return res.json({
-      testimonials: rows.map(row => ({
-        id: row.id,
-        name: row.name,
-        role: row.role,
-        videoUrl: row.video_url,
-        avatarUrl: row.avatar_url,
-        rating: row.rating,
-        textContent: row.text_content,
-        createdAt: row.created_at
-      }))
+      testimonials: rows.map(mapTestimonial)
     });
   } catch (error) {
     return next(error);
   }
 });
 
-router.post("/testimonials", verifyToken, authorizeRoles("admin"), upload.single("video"), async (req, res, next) => {
-  try {
-    const { name, role, rating, textContent } = req.body;
-    const videoUrl = req.file ? `/uploads/${req.file.filename}` : "";
-    const avatarUrl = req.body.avatarUrl || "";
+router.post(
+  "/testimonials",
+  verifyToken,
+  authorizeRoles("admin"),
+  upload.fields([
+    { name: "video", maxCount: 1 },
+    { name: "avatar", maxCount: 1 }
+  ]),
+  async (req, res, next) => {
+    try {
+      const rawName = String(req.body.name || "").trim();
+      const normalizedRole = normalizeTestimonialRole(req.body.role);
+      const normalizedRating = normalizeRating(req.body.rating);
+      const textContent = String(req.body.textContent || "").trim();
+      const uploadedVideo = req.files?.video?.[0];
+      const uploadedAvatar = req.files?.avatar?.[0];
+      const videoUrl = uploadedVideo ? buildUploadPath(uploadedVideo.filename) : "";
+      const avatarUrl = uploadedAvatar
+        ? buildUploadPath(uploadedAvatar.filename)
+        : String(req.body.avatarUrl || "").trim();
 
-    if (!name || !role) {
-      return res.status(400).json({ message: "Name and role are required." });
-    }
-
-    const pool = getPool();
-    const [result] = await pool.execute(
-      "INSERT INTO testimonials (name, role, video_url, avatar_url, rating, text_content) VALUES (?, ?, ?, ?, ?, ?)",
-      [name, role, videoUrl, avatarUrl, Number(rating) || 5, textContent || ""]
-    );
-
-    return res.status(201).json({
-      message: "Testimonial created successfully.",
-      testimonial: {
-        id: result.insertId,
-        name,
-        role,
-        videoUrl,
-        avatarUrl,
-        rating: Number(rating) || 5,
-        textContent: textContent || "",
-        createdAt: new Date()
+      if (!rawName) {
+        return res.status(400).json({ message: "Name and role are required." });
       }
-    });
-  } catch (error) {
-    return next(error);
+
+      if (!videoUrl && !textContent) {
+        return res.status(400).json({
+          message: "Please provide at least a video or testimonial text."
+        });
+      }
+
+      const pool = getPool();
+      const [result] = await pool.execute(
+        "INSERT INTO testimonials (name, role, video_url, avatar_url, rating, text_content) VALUES (?, ?, ?, ?, ?, ?)",
+        [rawName, normalizedRole, videoUrl, avatarUrl, normalizedRating, textContent]
+      );
+
+      return res.status(201).json({
+        message: "Testimonial created successfully.",
+        testimonial: {
+          id: result.insertId,
+          name: rawName,
+          role: normalizedRole,
+          videoUrl,
+          avatarUrl,
+          rating: normalizedRating,
+          textContent,
+          createdAt: new Date()
+        }
+      });
+    } catch (error) {
+      return next(error);
+    }
   }
-});
+);
 
-router.put("/testimonials/:id", verifyToken, authorizeRoles("admin"), upload.single("video"), async (req, res, next) => {
-  try {
-    const testimonialId = Number(req.params.id);
-    const { name, role, rating, textContent } = req.body;
-    const videoUrl = req.file ? `/uploads/${req.file.filename}` : req.body.videoUrl || "";
-    const avatarUrl = req.body.avatarUrl || "";
+router.put(
+  "/testimonials/:id",
+  verifyToken,
+  authorizeRoles("admin"),
+  upload.fields([
+    { name: "video", maxCount: 1 },
+    { name: "avatar", maxCount: 1 }
+  ]),
+  async (req, res, next) => {
+    try {
+      const testimonialId = Number(req.params.id);
+      const rawName = String(req.body.name || "").trim();
+      const normalizedRole = normalizeTestimonialRole(req.body.role);
+      const normalizedRating = normalizeRating(req.body.rating);
+      const textContent = String(req.body.textContent || "").trim();
 
-    if (!testimonialId) {
-      return res.status(400).json({ message: "A valid testimonial id is required." });
+      if (!testimonialId) {
+        return res.status(400).json({ message: "A valid testimonial id is required." });
+      }
+
+      if (!rawName) {
+        return res.status(400).json({ message: "Name and role are required." });
+      }
+
+      const pool = getPool();
+      const [[existing]] = await pool.execute(
+        "SELECT id, video_url, avatar_url FROM testimonials WHERE id = ? LIMIT 1",
+        [testimonialId]
+      );
+
+      if (!existing) {
+        return res.status(404).json({ message: "Testimonial not found." });
+      }
+
+      const uploadedVideo = req.files?.video?.[0];
+      const uploadedAvatar = req.files?.avatar?.[0];
+      const videoUrl = uploadedVideo
+        ? buildUploadPath(uploadedVideo.filename)
+        : String(req.body.videoUrl || existing.video_url || "").trim();
+      const avatarUrl = uploadedAvatar
+        ? buildUploadPath(uploadedAvatar.filename)
+        : String(req.body.avatarUrl || existing.avatar_url || "").trim();
+
+      if (!videoUrl && !textContent) {
+        return res.status(400).json({
+          message: "Please provide at least a video or testimonial text."
+        });
+      }
+
+      await pool.execute(
+        "UPDATE testimonials SET name = ?, role = ?, video_url = ?, avatar_url = ?, rating = ?, text_content = ? WHERE id = ?",
+        [rawName, normalizedRole, videoUrl, avatarUrl, normalizedRating, textContent, testimonialId]
+      );
+
+      return res.json({ message: "Testimonial updated successfully." });
+    } catch (error) {
+      return next(error);
     }
-
-    if (!name || !role) {
-      return res.status(400).json({ message: "Name and role are required." });
-    }
-
-    const pool = getPool();
-    const [existing] = await pool.execute(
-      "SELECT id FROM testimonials WHERE id = ? LIMIT 1",
-      [testimonialId]
-    );
-
-    if (existing.length === 0) {
-      return res.status(404).json({ message: "Testimonial not found." });
-    }
-
-    await pool.execute(
-      "UPDATE testimonials SET name = ?, role = ?, video_url = ?, avatar_url = ?, rating = ?, text_content = ? WHERE id = ?",
-      [name, role, videoUrl, avatarUrl, Number(rating) || 5, textContent || "", testimonialId]
-    );
-
-    return res.json({ message: "Testimonial updated successfully." });
-  } catch (error) {
-    return next(error);
   }
-});
+);
 
 router.delete("/testimonials/:id", verifyToken, authorizeRoles("admin"), async (req, res, next) => {
   try {
@@ -1065,6 +1142,71 @@ router.delete("/testimonials/:id", verifyToken, authorizeRoles("admin"), async (
     }
 
     return res.json({ message: "Testimonial deleted successfully." });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// Loan Support Requests - Admin endpoints
+router.get("/loan-requests", verifyToken, authorizeRoles("admin"), async (req, res, next) => {
+  try {
+    const pool = getPool();
+    const [rows] = await pool.execute(
+      `
+        SELECT
+          id,
+          loan_type,
+          name,
+          phone,
+          address,
+          occupation,
+          monthly_income,
+          landlord_name,
+          landlord_phone,
+          created_at
+        FROM loan_support_requests
+        ORDER BY created_at DESC
+      `
+    );
+
+    return res.json({
+      requests: rows.map((row) => ({
+        id: row.id,
+        loanType: row.loan_type,
+        name: row.name,
+        phone: row.phone || "",
+        address: row.address || "",
+        occupation: row.occupation || "",
+        monthlyIncome: Number(row.monthly_income || 0),
+        landlordName: row.landlord_name || "",
+        landlordPhone: row.landlord_phone || "",
+        createdAt: row.created_at
+      }))
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.delete("/loan-requests/:id", verifyToken, authorizeRoles("admin"), async (req, res, next) => {
+  try {
+    const requestId = Number(req.params.id);
+
+    if (!requestId) {
+      return res.status(400).json({ message: "A valid request id is required." });
+    }
+
+    const pool = getPool();
+    const [result] = await pool.execute(
+      "DELETE FROM loan_support_requests WHERE id = ?",
+      [requestId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Loan request not found." });
+    }
+
+    return res.json({ message: "Loan request deleted successfully." });
   } catch (error) {
     return next(error);
   }

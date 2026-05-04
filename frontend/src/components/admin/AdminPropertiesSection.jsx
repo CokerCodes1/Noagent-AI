@@ -40,6 +40,12 @@ export default function AdminPropertiesSection({
           listings unlock at N1,000 while sale listings unlock at N10,000.
         </p>
 
+        <p className="section-copy">
+          Admins can create listings for landlords, update any listing, and remove
+          properties even when they were originally posted by landlords. Rent
+          listings unlock at N2,000 while sale listings unlock at N10,000.
+        </p>
+
         <form className="property-form" onSubmit={handleManagedPropertySubmit}>
           <div className="form-grid">
             <label>

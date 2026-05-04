@@ -1,50 +1,47 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { FaTimes } from "react-icons/fa";
+import { AnimatePresence, motion as Motion } from "framer-motion";
+import { FiX } from "react-icons/fi";
+import { resolveMediaUrl } from "../../utils/media.js";
 
-const VideoModal = ({ testimonial, onClose }) => {
-  if (!testimonial) return null;
-
+export default function VideoModal({ testimonial, onClose }) {
   return (
     <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-      >
-        <motion.div
-          className="relative max-w-4xl w-full max-h-[90vh] bg-surface rounded-2xl overflow-hidden shadow-2xl"
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          onClick={(e) => e.stopPropagation()}
+      {testimonial ? (
+        <Motion.div
+          className="homepage-modal"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
         >
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 z-10 w-10 h-10 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors duration-200"
+          <Motion.div
+            className="homepage-modal-card"
+            initial={{ opacity: 0, y: 18, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.97 }}
+            onClick={(event) => event.stopPropagation()}
           >
-            <FaTimes size={16} />
-          </button>
-
-          <div className="aspect-video">
-            <video
-              className="w-full h-full object-cover"
-              controls
-              autoPlay
+            <button
+              type="button"
+              className="homepage-modal-close"
+              onClick={onClose}
+              aria-label="Close testimonial video"
             >
-              <source src={testimonial.videoUrl} type="video/mp4" />
-            </video>
-          </div>
+              <FiX />
+            </button>
 
-          <div className="p-6">
-            <h3 className="text-2xl font-bold mb-2">{testimonial.name}</h3>
-            <p className="text-accent capitalize text-lg">{testimonial.role}</p>
-          </div>
-        </motion.div>
-      </motion.div>
+            <div className="homepage-modal-video-wrap">
+              <video controls autoPlay playsInline preload="metadata">
+                <source src={resolveMediaUrl(testimonial.videoUrl)} type="video/mp4" />
+              </video>
+            </div>
+
+            <div className="homepage-modal-copy">
+              <h3>{testimonial.name}</h3>
+              <p>{testimonial.role}</p>
+            </div>
+          </Motion.div>
+        </Motion.div>
+      ) : null}
     </AnimatePresence>
   );
-};
-
-export default VideoModal;
+}
