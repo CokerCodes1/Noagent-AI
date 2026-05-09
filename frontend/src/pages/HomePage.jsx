@@ -33,12 +33,14 @@ export default function HomePage() {
   } = useTestimonials();
 
   const videoTestimonials = useMemo(
-    () => testimonials.filter((testimonial) => testimonial.videoUrl).slice(0, 6),
+    () =>
+      testimonials.filter((testimonial) => testimonial.videoUrl).slice(0, 6),
     [testimonials],
   );
 
   const textTestimonials = useMemo(
-    () => testimonials.filter((testimonial) => testimonial.textContent).slice(0, 8),
+    () =>
+      testimonials.filter((testimonial) => testimonial.textContent).slice(0, 8),
     [testimonials],
   );
 

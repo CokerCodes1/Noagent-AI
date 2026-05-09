@@ -1,6 +1,12 @@
 import { Suspense, lazy, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import InstallPrompt from "./components/shared/InstallPrompt.jsx";
 import OnlineStatusBanner from "./components/shared/OnlineStatusBanner.jsx";
@@ -16,7 +22,9 @@ const AdminDashboard = lazy(() => import("./pages/AdminDashboard.jsx"));
 const LandlordDashboard = lazy(() => import("./pages/LandlordDashboard.jsx"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess.jsx"));
 const RenterDashboard = lazy(() => import("./pages/RenterDashboard.jsx"));
-const TechnicianDashboard = lazy(() => import("./pages/TechnicianDashboard.jsx"));
+const TechnicianDashboard = lazy(
+  () => import("./pages/TechnicianDashboard.jsx"),
+);
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -31,7 +39,11 @@ function AnimatedRoutes() {
         exit={{ opacity: 0, y: -14 }}
         transition={{ duration: 0.22, ease: "easeOut" }}
       >
-        <Suspense fallback={<div className="app-fallback">Loading your workspace...</div>}>
+        <Suspense
+          fallback={
+            <div className="app-fallback">Loading your workspace...</div>
+          }
+        >
           <Routes location={location}>
             <Route path="/" element={<HomePage />} />
             <Route path="/auth" element={<Auth />} />
@@ -94,8 +106,14 @@ function AppFrame() {
     toast.info(
       <div className="pwa-update-toast">
         <strong>App update ready</strong>
-        <span>A newer NoAgentNaija build is available with fresh cached assets.</span>
-        <button className="btn primary" type="button" onClick={() => refreshApp()}>
+        <span>
+          A newer NoAgentNaija build is available with fresh cached assets.
+        </span>
+        <button
+          className="btn primary"
+          type="button"
+          onClick={() => refreshApp()}
+        >
           Refresh now
         </button>
       </div>,
@@ -104,8 +122,8 @@ function AppFrame() {
         closeButton: false,
         closeOnClick: false,
         position: "bottom-center",
-        toastId: "pwa-update-ready"
-      }
+        toastId: "pwa-update-ready",
+      },
     );
   }, [refreshApp, updateAvailable]);
 

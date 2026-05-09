@@ -12,8 +12,14 @@ const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 function syncViewportUnits() {
   const viewportHeight = window.visualViewport?.height || window.innerHeight;
 
-  document.documentElement.style.setProperty("--app-height", `${window.innerHeight}px`);
-  document.documentElement.style.setProperty("--visual-viewport-height", `${viewportHeight}px`);
+  document.documentElement.style.setProperty(
+    "--app-height",
+    `${window.innerHeight}px`,
+  );
+  document.documentElement.style.setProperty(
+    "--visual-viewport-height",
+    `${viewportHeight}px`,
+  );
 }
 
 syncViewportUnits();
@@ -29,7 +35,7 @@ if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
         event.preventDefault();
       }
     },
-    { passive: false }
+    { passive: false },
   );
 }
 
@@ -44,5 +50,5 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <GoogleOAuthProvider clientId={googleClientId}>{app}</GoogleOAuthProvider>
   ) : (
     app
-  )
+  ),
 );

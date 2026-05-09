@@ -1,4 +1,4 @@
-  import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import api, { extractErrorMessage } from "../api/axios.js";
@@ -696,13 +696,13 @@ export default function AdminDashboard() {
       ) : null}
 
       {activeSection === "loanRequests" ? (
-              <AdminLoanRequestsSection
-                loanRequests={loanRequests}
-                loanRequestsError={loanRequestsError}
-                loanRequestsLoading={loanRequestsLoading}
-                deletingRequestId={deletingRequestId}
-                handleDeleteRequest={handleDeleteRequest}
-              />
+        <AdminLoanRequestsSection
+          loanRequests={loanRequests}
+          loanRequestsError={loanRequestsError}
+          loanRequestsLoading={loanRequestsLoading}
+          deletingRequestId={deletingRequestId}
+          handleDeleteRequest={handleDeleteRequest}
+        />
       ) : null}
     </section>
   );

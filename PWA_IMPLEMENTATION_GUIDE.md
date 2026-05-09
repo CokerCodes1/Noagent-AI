@@ -96,10 +96,10 @@ frontend/
 **File**: `src/utils/pwaUtils.js`
 
 ```javascript
-import { registerServiceWorker, isRunningAsApp } from './utils/pwaUtils.js';
+import { registerServiceWorker, isRunningAsApp } from "./utils/pwaUtils.js";
 
 // Automatically registered in main.jsx
-window.addEventListener('load', () => {
+window.addEventListener("load", () => {
   registerServiceWorker();
 });
 ```
@@ -120,15 +120,18 @@ The service worker implements multiple caching strategies:
 **File**: `src/utils/notificationUtils.js`
 
 ```javascript
-import { enableNotificationsForRole, showLocalNotification } from './utils/notificationUtils.js';
+import {
+  enableNotificationsForRole,
+  showLocalNotification,
+} from "./utils/notificationUtils.js";
 
 // Request permission and subscribe
-await enableNotificationsForRole('landlord');
+await enableNotificationsForRole("landlord");
 
 // Show local notification
-showLocalNotification('Rent Reminder', {
-  body: 'Your rent is due in 5 days',
-  icon: '/icon-192.png'
+showLocalNotification("Rent Reminder", {
+  body: "Your rent is due in 5 days",
+  icon: "/icon-192.png",
 });
 ```
 
@@ -137,6 +140,7 @@ showLocalNotification('Rent Reminder', {
 **File**: `src/components/shared/InstallPrompt.jsx`
 
 Custom install banner appears automatically on supported browsers:
+
 - Shows app icon and description
 - Install button triggers browser's install flow
 - Dismissible with local storage persistence
@@ -146,6 +150,7 @@ Custom install banner appears automatically on supported browsers:
 **File**: `src/components/settings/PwaSettings.jsx`
 
 Users can:
+
 - Enable/disable push notifications
 - Check for app updates
 - Clear app cache
@@ -170,6 +175,7 @@ npm run build
 ```
 
 This creates an optimized `dist/` folder with:
+
 - Minified code
 - Code-split bundles
 - Optimized assets
@@ -316,6 +322,7 @@ VITE_VAPID_PUBLIC_KEY=your_vapid_public_key_here
 ```
 
 Generate VAPID keys:
+
 ```bash
 npm install -g web-push
 web-push generate-vapid-keys
@@ -395,6 +402,7 @@ Visit `http://localhost:5173` - Service Worker needs HTTPS or localhost
 ### Cache Versioning
 
 When deploying updates:
+
 1. Increment version number: `const CACHE_VERSION = 'v2'`
 2. Old caches automatically cleaned on activation
 3. Users get latest on next load
@@ -406,31 +414,34 @@ When deploying updates:
 ### Node.js Example
 
 ```javascript
-const webpush = require('web-push');
+const webpush = require("web-push");
 
 const vapidDetails = {
   publicKey: process.env.VAPID_PUBLIC_KEY,
   privateKey: process.env.VAPID_PRIVATE_KEY,
-  subject: 'mailto:support@noagentnaija.com'
+  subject: "mailto:support@noagentnaija.com",
 };
 
 webpush.setVapidDetails(
   vapidDetails.subject,
   vapidDetails.publicKey,
-  vapidDetails.privateKey
+  vapidDetails.privateKey,
 );
 
 // Send notification
 async function sendNotification(subscription, notificationData) {
   try {
-    await webpush.sendNotification(subscription, JSON.stringify(notificationData));
+    await webpush.sendNotification(
+      subscription,
+      JSON.stringify(notificationData),
+    );
   } catch (error) {
-    console.error('Notification error:', error);
+    console.error("Notification error:", error);
   }
 }
 
 // Example usage
-app.post('/api/notifications/send', async (req, res) => {
+app.post("/api/notifications/send", async (req, res) => {
   const { userId, title, body, type } = req.body;
 
   // Get user's subscription from database
@@ -439,10 +450,10 @@ app.post('/api/notifications/send', async (req, res) => {
   await sendNotification(subscription, {
     title,
     body,
-    icon: '/icon-192.png',
-    badge: '/icon-96.png',
+    icon: "/icon-192.png",
+    badge: "/icon-96.png",
     tag: `notification-${type}`,
-    data: { url: `/`, type }
+    data: { url: `/`, type },
   });
 
   res.json({ success: true });
@@ -495,7 +506,7 @@ Expected results with PWA:
 
 ```javascript
 // Check in browser console
-navigator.serviceWorker.getRegistrations().then(registrations => {
+navigator.serviceWorker.getRegistrations().then((registrations) => {
   console.log(registrations);
 });
 ```
@@ -550,13 +561,13 @@ navigator.serviceWorker.getRegistrations().then(registrations => {
 ```javascript
 // In service worker
 // Increment version and deploy
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = "v2";
 ```
 
 ### User-Initiated Updates
 
 ```javascript
-import { promptUpdateReload } from './utils/pwaUtils.js';
+import { promptUpdateReload } from "./utils/pwaUtils.js";
 
 // In settings or update notification
 promptUpdateReload(); // Prompts user to reload

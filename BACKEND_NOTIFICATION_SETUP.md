@@ -64,12 +64,12 @@ CREATE TABLE push_subscriptions (
 File: `config/webpush.js`
 
 ```javascript
-const webpush = require('web-push');
+const webpush = require("web-push");
 
 webpush.setVapidDetails(
   process.env.VAPID_SUBJECT,
   process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
+  process.env.VAPID_PRIVATE_KEY,
 );
 
 module.exports = webpush;
@@ -80,8 +80,8 @@ module.exports = webpush;
 File: `controllers/notificationController.js`
 
 ```javascript
-const webpush = require('web-push');
-const db = require('../config/db');
+const webpush = require("web-push");
+const db = require("../config/db");
 
 // Subscribe to push notifications
 exports.subscribe = async (req, res) => {
@@ -90,35 +90,35 @@ exports.subscribe = async (req, res) => {
     const userId = req.user.id; // From auth middleware
 
     if (!subscription || !subscription.endpoint) {
-      return res.status(400).json({ error: 'Invalid subscription' });
+      return res.status(400).json({ error: "Invalid subscription" });
     }
 
     // Check if already subscribed
     const existing = await db.query(
-      'SELECT id FROM push_subscriptions WHERE user_id = ? AND endpoint = ?',
-      [userId, subscription.endpoint]
+      "SELECT id FROM push_subscriptions WHERE user_id = ? AND endpoint = ?",
+      [userId, subscription.endpoint],
     );
 
     if (existing.length > 0) {
-      return res.json({ success: true, message: 'Already subscribed' });
+      return res.json({ success: true, message: "Already subscribed" });
     }
 
     // Store subscription
     await db.query(
-      'INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, role, enabled) VALUES (?, ?, ?, ?, ?, TRUE)',
+      "INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, role, enabled) VALUES (?, ?, ?, ?, ?, TRUE)",
       [
         userId,
         subscription.endpoint,
         subscription.keys.p256dh,
         subscription.keys.auth,
-        role
-      ]
+        role,
+      ],
     );
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Subscribe error:', error);
-    res.status(500).json({ error: 'Subscription failed' });
+    console.error("Subscribe error:", error);
+    res.status(500).json({ error: "Subscription failed" });
   }
 };
 
@@ -129,14 +129,14 @@ exports.unsubscribe = async (req, res) => {
     const userId = req.user.id;
 
     await db.query(
-      'DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?',
-      [userId, endpoint]
+      "DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?",
+      [userId, endpoint],
     );
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Unsubscribe error:', error);
-    res.status(500).json({ error: 'Unsubscribe failed' });
+    console.error("Unsubscribe error:", error);
+    res.status(500).json({ error: "Unsubscribe failed" });
   }
 };
 
@@ -147,21 +147,21 @@ exports.enableRole = async (req, res) => {
     const userId = req.user.id;
 
     // Check valid role
-    const validRoles = ['landlord', 'renter', 'technician', 'admin'];
+    const validRoles = ["landlord", "renter", "technician", "admin"];
     if (!validRoles.includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
+      return res.status(400).json({ error: "Invalid role" });
     }
 
     // Enable all subscriptions for this role
     await db.query(
-      'UPDATE push_subscriptions SET enabled = TRUE WHERE user_id = ? AND role = ?',
-      [userId, role]
+      "UPDATE push_subscriptions SET enabled = TRUE WHERE user_id = ? AND role = ?",
+      [userId, role],
     );
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Enable error:', error);
-    res.status(500).json({ error: 'Enable failed' });
+    console.error("Enable error:", error);
+    res.status(500).json({ error: "Enable failed" });
   }
 };
 
@@ -172,14 +172,14 @@ exports.disableRole = async (req, res) => {
     const userId = req.user.id;
 
     await db.query(
-      'UPDATE push_subscriptions SET enabled = FALSE WHERE user_id = ? AND role = ?',
-      [userId, role]
+      "UPDATE push_subscriptions SET enabled = FALSE WHERE user_id = ? AND role = ?",
+      [userId, role],
     );
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Disable error:', error);
-    res.status(500).json({ error: 'Disable failed' });
+    console.error("Disable error:", error);
+    res.status(500).json({ error: "Disable failed" });
   }
 };
 
@@ -189,14 +189,14 @@ exports.getSubscriptions = async (req, res) => {
     const userId = req.user.id;
 
     const subscriptions = await db.query(
-      'SELECT role, enabled FROM push_subscriptions WHERE user_id = ? GROUP BY role',
-      [userId]
+      "SELECT role, enabled FROM push_subscriptions WHERE user_id = ? GROUP BY role",
+      [userId],
     );
 
     res.json({ subscriptions });
   } catch (error) {
-    console.error('Get subscriptions error:', error);
-    res.status(500).json({ error: 'Failed to get subscriptions' });
+    console.error("Get subscriptions error:", error);
+    res.status(500).json({ error: "Failed to get subscriptions" });
   }
 };
 
@@ -206,55 +206,55 @@ exports.sendToUser = async (req, res) => {
     const { userId, title, body, data = {} } = req.body;
 
     const subscriptions = await db.query(
-      'SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ? AND enabled = TRUE',
-      [userId]
+      "SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ? AND enabled = TRUE",
+      [userId],
     );
 
     if (subscriptions.length === 0) {
-      return res.json({ success: false, message: 'No active subscriptions' });
+      return res.json({ success: false, message: "No active subscriptions" });
     }
 
     const payload = JSON.stringify({
       title,
       body,
-      icon: '/icon-192.png',
-      badge: '/icon-96.png',
+      icon: "/icon-192.png",
+      badge: "/icon-96.png",
       tag: `notification-${Date.now()}`,
-      data
+      data,
     });
 
     const results = await Promise.allSettled(
-      subscriptions.map(sub =>
+      subscriptions.map((sub) =>
         webpush.sendNotification(
           {
             endpoint: sub.endpoint,
-            keys: { p256dh: sub.p256dh, auth: sub.auth }
+            keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
-          payload
-        )
-      )
+          payload,
+        ),
+      ),
     );
 
-    const successful = results.filter(r => r.status === 'fulfilled').length;
-    const failed = results.filter(r => r.status === 'rejected').length;
+    const successful = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected").length;
 
     // Remove failed subscriptions (likely unsubscribed)
     for (let i = 0; i < results.length; i++) {
-      if (results[i].status === 'rejected') {
+      if (results[i].status === "rejected") {
         const reason = results[i].reason;
-        if (reason.statusCode === 410) { // Gone
-          await db.query(
-            'DELETE FROM push_subscriptions WHERE endpoint = ?',
-            [subscriptions[i].endpoint]
-          );
+        if (reason.statusCode === 410) {
+          // Gone
+          await db.query("DELETE FROM push_subscriptions WHERE endpoint = ?", [
+            subscriptions[i].endpoint,
+          ]);
         }
       }
     }
 
     res.json({ success: true, sent: successful, failed });
   } catch (error) {
-    console.error('Send notification error:', error);
-    res.status(500).json({ error: 'Failed to send notification' });
+    console.error("Send notification error:", error);
+    res.status(500).json({ error: "Failed to send notification" });
   }
 };
 
@@ -264,42 +264,45 @@ exports.sendToRole = async (req, res) => {
     const { role, title, body, data = {} } = req.body;
 
     const subscriptions = await db.query(
-      'SELECT DISTINCT endpoint, p256dh, auth FROM push_subscriptions WHERE role = ? AND enabled = TRUE',
-      [role]
+      "SELECT DISTINCT endpoint, p256dh, auth FROM push_subscriptions WHERE role = ? AND enabled = TRUE",
+      [role],
     );
 
     if (subscriptions.length === 0) {
-      return res.json({ success: false, message: 'No subscribed users in role' });
+      return res.json({
+        success: false,
+        message: "No subscribed users in role",
+      });
     }
 
     const payload = JSON.stringify({
       title,
       body,
-      icon: '/icon-192.png',
-      badge: '/icon-96.png',
+      icon: "/icon-192.png",
+      badge: "/icon-96.png",
       tag: `notification-${Date.now()}`,
-      data
+      data,
     });
 
     const results = await Promise.allSettled(
-      subscriptions.map(sub =>
+      subscriptions.map((sub) =>
         webpush.sendNotification(
           {
             endpoint: sub.endpoint,
-            keys: { p256dh: sub.p256dh, auth: sub.auth }
+            keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
-          payload
-        )
-      )
+          payload,
+        ),
+      ),
     );
 
-    const successful = results.filter(r => r.status === 'fulfilled').length;
-    const failed = results.filter(r => r.status === 'rejected').length;
+    const successful = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected").length;
 
     res.json({ success: true, sent: successful, failed });
   } catch (error) {
-    console.error('Send to role error:', error);
-    res.status(500).json({ error: 'Failed to send notifications' });
+    console.error("Send to role error:", error);
+    res.status(500).json({ error: "Failed to send notifications" });
   }
 };
 ```
@@ -309,25 +312,25 @@ exports.sendToRole = async (req, res) => {
 File: `routes/notifications.js`
 
 ```javascript
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const notificationController = require('../controllers/notificationController');
-const auth = require('../middleware/auth');
+const notificationController = require("../controllers/notificationController");
+const auth = require("../middleware/auth");
 
 // Subscription management
-router.post('/subscribe', auth, notificationController.subscribe);
-router.post('/unsubscribe', auth, notificationController.unsubscribe);
-router.post('/enable/:role', auth, notificationController.enableRole);
-router.post('/disable/:role', auth, notificationController.disableRole);
-router.get('/subscriptions', auth, notificationController.getSubscriptions);
+router.post("/subscribe", auth, notificationController.subscribe);
+router.post("/unsubscribe", auth, notificationController.unsubscribe);
+router.post("/enable/:role", auth, notificationController.enableRole);
+router.post("/disable/:role", auth, notificationController.disableRole);
+router.get("/subscriptions", auth, notificationController.getSubscriptions);
 
 // Sending notifications (admin only)
-router.post('/send-user', auth, isAdmin, notificationController.sendToUser);
-router.post('/send-role', auth, isAdmin, notificationController.sendToRole);
+router.post("/send-user", auth, isAdmin, notificationController.sendToUser);
+router.post("/send-role", auth, isAdmin, notificationController.sendToRole);
 
 const isAdmin = (req, res, next) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin only' });
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ error: "Admin only" });
   }
   next();
 };
@@ -342,11 +345,11 @@ File: `server.js`
 ```javascript
 // ... existing imports
 
-const notificationRoutes = require('./routes/notifications');
+const notificationRoutes = require("./routes/notifications");
 
 // ... existing middleware
 
-app.use('/api/notifications', notificationRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // ... rest of server
 ```
@@ -358,51 +361,50 @@ app.use('/api/notifications', notificationRoutes);
 File: `controllers/adminController.js`
 
 ```javascript
-const db = require('../config/db');
-const webpush = require('../config/webpush');
+const db = require("../config/db");
+const webpush = require("../config/webpush");
 
 // Send notification to landlords about new maintenance request
 exports.notifyLandlordsNewRequest = async (requestId, propertyId) => {
   try {
     const request = await db.query(
-      'SELECT * FROM maintenance_requests WHERE id = ?',
-      [requestId]
+      "SELECT * FROM maintenance_requests WHERE id = ?",
+      [requestId],
     );
 
-    const property = await db.query(
-      'SELECT * FROM properties WHERE id = ?',
-      [propertyId]
-    );
+    const property = await db.query("SELECT * FROM properties WHERE id = ?", [
+      propertyId,
+    ]);
 
     const subscriptions = await db.query(
-      'SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE role = "landlord" AND enabled = TRUE'
+      'SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE role = "landlord" AND enabled = TRUE',
     );
 
     const payload = JSON.stringify({
-      title: 'New Maintenance Request',
+      title: "New Maintenance Request",
       body: `New request for ${property[0].name}`,
-      icon: '/icon-192.png',
-      badge: '/icon-96.png',
+      icon: "/icon-192.png",
+      badge: "/icon-96.png",
       tag: `maintenance-${requestId}`,
       data: {
         url: `/dashboard/properties/${propertyId}/requests`,
-        requestId
-      }
+        requestId,
+      },
     });
 
     await Promise.allSettled(
-      subscriptions.map(sub =>
+      subscriptions.map((sub) =>
         webpush.sendNotification(
           {
             endpoint: sub.endpoint,
-            keys: { p256dh: sub.p256dh, auth: sub.auth }
+            keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
-          payload
-        )
-      )
+          payload,
+        ),
+      ),
     );
   } catch (error) {
-    console.error('Notify error:', error);
+    console.error("Notify error:", error);
   }
 };
 
@@ -410,40 +412,40 @@ exports.notifyLandlordsNewRequest = async (requestId, propertyId) => {
 exports.notifyTenantRentReminder = async (leaseId, daysUntilDue) => {
   try {
     const lease = await db.query(
-      'SELECT user_id, amount FROM leases WHERE id = ?',
-      [leaseId]
+      "SELECT user_id, amount FROM leases WHERE id = ?",
+      [leaseId],
     );
 
     const subscriptions = await db.query(
-      'SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ? AND enabled = TRUE',
-      [lease[0].user_id]
+      "SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ? AND enabled = TRUE",
+      [lease[0].user_id],
     );
 
     const payload = JSON.stringify({
-      title: 'Rent Due Soon',
+      title: "Rent Due Soon",
       body: `Rent of ₦${lease[0].amount} is due in ${daysUntilDue} days`,
-      icon: '/icon-192.png',
-      badge: '/icon-96.png',
-      tag: 'rent-reminder',
+      icon: "/icon-192.png",
+      badge: "/icon-96.png",
+      tag: "rent-reminder",
       data: {
-        url: '/dashboard/payments',
-        leaseId
-      }
+        url: "/dashboard/payments",
+        leaseId,
+      },
     });
 
     await Promise.allSettled(
-      subscriptions.map(sub =>
+      subscriptions.map((sub) =>
         webpush.sendNotification(
           {
             endpoint: sub.endpoint,
-            keys: { p256dh: sub.p256dh, auth: sub.auth }
+            keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
-          payload
-        )
-      )
+          payload,
+        ),
+      ),
     );
   } catch (error) {
-    console.error('Rent reminder error:', error);
+    console.error("Rent reminder error:", error);
   }
 };
 ```
@@ -487,19 +489,20 @@ curl -X POST http://localhost:5003/api/notifications/send-user \
 
 ```javascript
 // Get subscription from client
-const subscription = await navigator.serviceWorker.ready
-  .then(r => r.pushManager.getSubscription());
+const subscription = await navigator.serviceWorker.ready.then((r) =>
+  r.pushManager.getSubscription(),
+);
 
 // Send to backend
-fetch('/api/notifications/send-user', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+fetch("/api/notifications/send-user", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
     userId: 123,
-    title: 'Test',
-    body: 'Test notification',
-    subscription
-  })
+    title: "Test",
+    body: "Test notification",
+    subscription,
+  }),
 });
 ```
 
@@ -518,12 +521,14 @@ VAPID_SUBJECT=mailto:support@noagentnaija.com
 ### CORS Configuration
 
 ```javascript
-const cors = require('cors');
+const cors = require("cors");
 
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    credentials: true,
+  }),
+);
 ```
 
 ## Troubleshooting
@@ -549,11 +554,11 @@ app.use(cors({
 ### Log push activities
 
 ```javascript
-const fs = require('fs');
+const fs = require("fs");
 
 function logNotification(userId, title, status) {
   const log = `${new Date().toISOString()} - User ${userId}: ${title} - ${status}\n`;
-  fs.appendFileSync('notifications.log', log);
+  fs.appendFileSync("notifications.log", log);
 }
 ```
 
@@ -561,11 +566,13 @@ function logNotification(userId, title, status) {
 
 ```javascript
 const failedSubs = await db.query(
-  'SELECT id, user_id, role FROM push_subscriptions WHERE updated_at < DATE_SUB(NOW(), INTERVAL 30 DAY)'
+  "SELECT id, user_id, role FROM push_subscriptions WHERE updated_at < DATE_SUB(NOW(), INTERVAL 30 DAY)",
 );
 
 // Cleanup old inactive subscriptions
-await db.query('DELETE FROM push_subscriptions WHERE updated_at < DATE_SUB(NOW(), INTERVAL 90 DAY)');
+await db.query(
+  "DELETE FROM push_subscriptions WHERE updated_at < DATE_SUB(NOW(), INTERVAL 90 DAY)",
+);
 ```
 
 ## Best Practices

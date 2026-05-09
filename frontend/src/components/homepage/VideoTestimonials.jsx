@@ -7,7 +7,11 @@ import Reveal from "./Reveal.jsx";
 import { fadeInUp, staggerChildren } from "./homepageMotion.js";
 import VideoModal from "./VideoModal.jsx";
 
-export default function VideoTestimonials({ testimonials = [], loading, error }) {
+export default function VideoTestimonials({
+  testimonials = [],
+  loading,
+  error,
+}) {
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [failedVideoIds, setFailedVideoIds] = useState([]);
 
@@ -19,20 +23,28 @@ export default function VideoTestimonials({ testimonials = [], loading, error })
 
   const handleVideoError = (testimonialId) => {
     setFailedVideoIds((existing) =>
-      existing.includes(testimonialId) ? existing : [...existing, testimonialId],
+      existing.includes(testimonialId)
+        ? existing
+        : [...existing, testimonialId],
     );
   };
 
   const isVideoBroken = (id) => failedVideoIds.includes(id);
 
   return (
-    <section id="homepage-testimonials" className="homepage-section homepage-section-dark">
+    <section
+      id="homepage-testimonials"
+      className="homepage-section homepage-section-dark"
+    >
       <div className="homepage-container">
         <Reveal className="homepage-section-heading">
           <p className="eyebrow">Video testimonials</p>
-          <h2 className="homepage-gradient-title">Real people. Clear proof. Direct results.</h2>
+          <h2 className="homepage-gradient-title">
+            Real people. Clear proof. Direct results.
+          </h2>
           <p>
-            Watch quick stories from landlords, renters, and technicians using NoAgentNaija to move faster without agent friction.
+            Watch quick stories from landlords, renters, and technicians using
+            NoAgentNaija to move faster without agent friction.
           </p>
         </Reveal>
 
@@ -55,7 +67,10 @@ export default function VideoTestimonials({ testimonials = [], loading, error })
 
               if (broken) {
                 return (
-                  <article key={testimonial.id} className="homepage-video-card homepage-video-card-broken">
+                  <article
+                    key={testimonial.id}
+                    className="homepage-video-card homepage-video-card-broken"
+                  >
                     <div className="homepage-video-frame homepage-video-frame-broken">
                       <div className="homepage-video-broken-message">
                         <p>Video unavailable</p>
@@ -85,7 +100,10 @@ export default function VideoTestimonials({ testimonials = [], loading, error })
                       poster={resolveMediaUrl(HOMEPAGE_MEDIA.heroPoster)}
                       onError={() => handleVideoError(testimonial.id)}
                     >
-                      <source src={resolveMediaUrl(testimonial.videoUrl)} type="video/mp4" />
+                      <source
+                        src={resolveMediaUrl(testimonial.videoUrl)}
+                        type="video/mp4"
+                      />
                     </video>
                     <div className="homepage-video-overlay">
                       <span className="homepage-video-play">
@@ -109,7 +127,10 @@ export default function VideoTestimonials({ testimonials = [], loading, error })
         )}
       </div>
 
-      <VideoModal testimonial={selectedVideo} onClose={() => setSelectedVideo(null)} />
+      <VideoModal
+        testimonial={selectedVideo}
+        onClose={() => setSelectedVideo(null)}
+      />
     </section>
   );
 }

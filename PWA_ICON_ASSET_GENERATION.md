@@ -10,17 +10,17 @@ All icons must be in **PNG format** with **transparent background**.
 
 #### Required Sizes
 
-| Filename | Size | Purpose | Maskable |
-|----------|------|---------|----------|
-| `icon-192.png` | 192×192 | Android Home Screen | ❌ |
-| `icon-192-maskable.png` | 192×192 | Android Adaptive Icon | ✅ |
-| `icon-512.png` | 512×512 | App Store Preview | ❌ |
-| `icon-512-maskable.png` | 512×512 | App Store Preview | ✅ |
-| `icon-96.png` | 96×96 | Notification Badge | ❌ |
-| `icon-70.png` | 70×70 | Windows Tile | ❌ |
-| `icon-150.png` | 150×150 | Windows Tile | ❌ |
-| `icon-310.png` | 310×310 | Windows Tile | ❌ |
-| `icon-310-wide.png` | 310×150 | Windows Tile (Wide) | ❌ |
+| Filename                | Size    | Purpose               | Maskable |
+| ----------------------- | ------- | --------------------- | -------- |
+| `icon-192.png`          | 192×192 | Android Home Screen   | ❌       |
+| `icon-192-maskable.png` | 192×192 | Android Adaptive Icon | ✅       |
+| `icon-512.png`          | 512×512 | App Store Preview     | ❌       |
+| `icon-512-maskable.png` | 512×512 | App Store Preview     | ✅       |
+| `icon-96.png`           | 96×96   | Notification Badge    | ❌       |
+| `icon-70.png`           | 70×70   | Windows Tile          | ❌       |
+| `icon-150.png`          | 150×150 | Windows Tile          | ❌       |
+| `icon-310.png`          | 310×310 | Windows Tile          | ❌       |
+| `icon-310-wide.png`     | 310×150 | Windows Tile (Wide)   | ❌       |
 
 **Location**: Save all to `frontend/public/`
 
@@ -28,12 +28,12 @@ All icons must be in **PNG format** with **transparent background**.
 
 For app store listings in manifest.
 
-| Filename | Size | Aspect | Purpose |
-|----------|------|--------|---------|
-| `screenshot-narrow-1.png` | 540×720 | Portrait | Mobile app store |
-| `screenshot-narrow-2.png` | 540×720 | Portrait | Mobile app store |
-| `screenshot-wide-1.png` | 1280×720 | Landscape | Tablet/Desktop |
-| `screenshot-wide-2.png` | 1280×720 | Landscape | Tablet/Desktop |
+| Filename                  | Size     | Aspect    | Purpose          |
+| ------------------------- | -------- | --------- | ---------------- |
+| `screenshot-narrow-1.png` | 540×720  | Portrait  | Mobile app store |
+| `screenshot-narrow-2.png` | 540×720  | Portrait  | Mobile app store |
+| `screenshot-wide-1.png`   | 1280×720 | Landscape | Tablet/Desktop   |
+| `screenshot-wide-2.png`   | 1280×720 | Landscape | Tablet/Desktop   |
 
 **Location**: Save all to `frontend/public/`
 
@@ -94,23 +94,23 @@ convert source-logo.png -resize 310x150 icon-310-wide.png
 Create `frontend/scripts/generate-icons.js`:
 
 ```javascript
-const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs');
+const sharp = require("sharp");
+const path = require("path");
+const fs = require("fs");
 
-const sourceImage = path.join(__dirname, '../source-logo.png');
-const publicDir = path.join(__dirname, '../public');
+const sourceImage = path.join(__dirname, "../source-logo.png");
+const publicDir = path.join(__dirname, "../public");
 
 const sizes = [
-  { name: 'icon-192.png', size: 192 },
-  { name: 'icon-192-maskable.png', size: 192 },
-  { name: 'icon-512.png', size: 512 },
-  { name: 'icon-512-maskable.png', size: 512 },
-  { name: 'icon-96.png', size: 96 },
-  { name: 'icon-70.png', size: 70 },
-  { name: 'icon-150.png', size: 150 },
-  { name: 'icon-310.png', size: 310 },
-  { name: 'icon-310-wide.png', size: 310, height: 150 }
+  { name: "icon-192.png", size: 192 },
+  { name: "icon-192-maskable.png", size: 192 },
+  { name: "icon-512.png", size: 512 },
+  { name: "icon-512-maskable.png", size: 512 },
+  { name: "icon-96.png", size: 96 },
+  { name: "icon-70.png", size: 70 },
+  { name: "icon-150.png", size: 150 },
+  { name: "icon-310.png", size: 310 },
+  { name: "icon-310-wide.png", size: 310, height: 150 },
 ];
 
 async function generateIcons() {
@@ -122,8 +122,8 @@ async function generateIcons() {
 
     await sharp(sourceImage)
       .resize(config.size, height, {
-        fit: 'contain',
-        background: { r: 0, g: 0, b: 0, alpha: 0 }
+        fit: "contain",
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
       })
       .png()
       .toFile(outputPath);
@@ -131,11 +131,11 @@ async function generateIcons() {
     console.log(`✓ ${config.name}`);
   }
 
-  console.log('All icons generated!');
+  console.log("All icons generated!");
 }
 
-generateIcons().catch(err => {
-  console.error('Error:', err);
+generateIcons().catch((err) => {
+  console.error("Error:", err);
   process.exit(1);
 });
 ```
@@ -408,25 +408,25 @@ Add to package.json:
 Create `frontend/scripts/verify-icons.js`:
 
 ```javascript
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 const requiredIcons = [
-  'icon-192.png',
-  'icon-192-maskable.png',
-  'icon-512.png',
-  'icon-512-maskable.png',
-  'icon-96.png',
-  'icon-70.png',
-  'icon-150.png',
-  'icon-310.png',
-  'icon-310-wide.png'
+  "icon-192.png",
+  "icon-192-maskable.png",
+  "icon-512.png",
+  "icon-512-maskable.png",
+  "icon-96.png",
+  "icon-70.png",
+  "icon-150.png",
+  "icon-310.png",
+  "icon-310-wide.png",
 ];
 
-const publicDir = path.join(__dirname, '../public');
+const publicDir = path.join(__dirname, "../public");
 const missing = [];
 
-requiredIcons.forEach(icon => {
+requiredIcons.forEach((icon) => {
   const filePath = path.join(publicDir, icon);
   if (!fs.existsSync(filePath)) {
     missing.push(icon);
@@ -436,10 +436,10 @@ requiredIcons.forEach(icon => {
 });
 
 if (missing.length > 0) {
-  console.error(`\n❌ Missing icons: ${missing.join(', ')}`);
+  console.error(`\n❌ Missing icons: ${missing.join(", ")}`);
   process.exit(1);
 } else {
-  console.log('\n✓ All required icons found!');
+  console.log("\n✓ All required icons found!");
 }
 ```
 
@@ -464,6 +464,7 @@ npm run verify-icons
 ---
 
 For issues or questions, check:
+
 - [PWA Builder Docs](https://www.pwabuilder.com/)
 - [Google PWA Checklist](https://web.dev/install-criteria/)
 - [MDN Icons Reference](https://developer.mozilla.org/en-US/docs/Web/Manifest)

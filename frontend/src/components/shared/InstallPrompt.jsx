@@ -4,7 +4,12 @@ import { useLocation } from "react-router-dom";
 import { usePwa } from "../../contexts/PwaContext.jsx";
 
 function getPromptDelay(pathname) {
-  if (pathname.startsWith("/admin") || pathname.startsWith("/landlord") || pathname.startsWith("/renter") || pathname.startsWith("/technician")) {
+  if (
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/landlord") ||
+    pathname.startsWith("/renter") ||
+    pathname.startsWith("/technician")
+  ) {
     return 2200;
   }
 
@@ -25,12 +30,17 @@ export default function InstallPrompt() {
     isInstallSuppressed,
     isIosManualInstall,
     isStandalone,
-    openInstallPrompt
+    openInstallPrompt,
   } = usePwa();
   const [isInstalling, setIsInstalling] = useState(false);
 
   useEffect(() => {
-    if (!canInstall || isStandalone || isInstallSuppressed || installPromptOpen) {
+    if (
+      !canInstall ||
+      isStandalone ||
+      isInstallSuppressed ||
+      installPromptOpen
+    ) {
       return undefined;
     }
 
@@ -47,7 +57,7 @@ export default function InstallPrompt() {
     isInstallSuppressed,
     isStandalone,
     location.pathname,
-    openInstallPrompt
+    openInstallPrompt,
   ]);
 
   const promptCopy = useMemo(() => {
@@ -55,14 +65,14 @@ export default function InstallPrompt() {
       return {
         description:
           "Add NoAgentNaija to your Home Screen for a full-screen app experience with faster reopening and offline support.",
-        title: "Install on iPhone or iPad"
+        title: "Install on iPhone or iPad",
       };
     }
 
     return {
       description:
         "Install NoAgentNaija for a faster app shell, offline-ready public content, and a cleaner full-screen experience.",
-      title: "Install NoAgentNaija"
+      title: "Install NoAgentNaija",
     };
   }, [isIosManualInstall]);
 
@@ -106,8 +116,12 @@ export default function InstallPrompt() {
 
         {isIosManualInstall ? (
           <ol className="pwa-install-instructions">
-            <li>Tap the <FiShare2 aria-hidden="true" /> Share button in Safari.</li>
-            <li>Choose <strong>Add to Home Screen</strong>.</li>
+            <li>
+              Tap the <FiShare2 aria-hidden="true" /> Share button in Safari.
+            </li>
+            <li>
+              Choose <strong>Add to Home Screen</strong>.
+            </li>
             <li>Open NoAgentNaija from your Home Screen like a native app.</li>
           </ol>
         ) : null}

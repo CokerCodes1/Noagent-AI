@@ -119,6 +119,7 @@ VITE_VAPID_PUBLIC_KEY=your_vapid_public_key_here
 ### PWA Settings
 
 Edit `src/utils/pwaUtils.js` and `public/sw.js` for:
+
 - Cache versioning
 - Caching strategies
 - API cache duration
@@ -135,6 +136,7 @@ lighthouse http://localhost:5173 --view
 ```
 
 Expected metrics:
+
 - **Performance**: 85+
 - **Accessibility**: 90+
 - **Best Practices**: 90+
@@ -147,7 +149,7 @@ Expected metrics:
 
 ```javascript
 // Check in browser console
-navigator.serviceWorker.getRegistrations().then(r => console.log(r))
+navigator.serviceWorker.getRegistrations().then((r) => console.log(r));
 ```
 
 **Fix**: Must be HTTPS or localhost
@@ -156,9 +158,9 @@ navigator.serviceWorker.getRegistrations().then(r => console.log(r))
 
 ```javascript
 // Clear all caches
-caches.keys().then(keys => Promise.all(
-  keys.map(key => caches.delete(key))
-))
+caches
+  .keys()
+  .then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
 ```
 
 ### Notifications not showing?
@@ -207,6 +209,7 @@ caches.keys().then(keys => Promise.all(
 ## 📞 Support
 
 For issues or questions:
+
 1. Check [PWA_IMPLEMENTATION_GUIDE.md](./PWA_IMPLEMENTATION_GUIDE.md)
 2. Review browser console for errors
 3. Check DevTools Application tab

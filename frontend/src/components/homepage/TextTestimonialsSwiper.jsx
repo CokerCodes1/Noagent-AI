@@ -41,7 +41,11 @@ function TestimonialSlide({ testimonial }) {
   );
 }
 
-export default function TextTestimonialsSwiper({ testimonials = [], loading, error }) {
+export default function TextTestimonialsSwiper({
+  testimonials = [],
+  loading,
+  error,
+}) {
   const items = testimonials || [];
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoplayPaused, setIsAutoplayPaused] = useState(false);

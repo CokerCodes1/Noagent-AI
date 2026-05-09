@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import api, { extractErrorMessage } from "../api/axios.js";
 
 const TestimonialsContext = createContext(null);
@@ -7,7 +14,9 @@ export function useTestimonials() {
   const context = useContext(TestimonialsContext);
 
   if (!context) {
-    throw new Error("useTestimonials must be used within a TestimonialsProvider");
+    throw new Error(
+      "useTestimonials must be used within a TestimonialsProvider",
+    );
   }
 
   return context;
@@ -32,7 +41,8 @@ export default function TestimonialsProvider({ children }) {
       }
 
       const sortedTestimonials = [...fetchedTestimonials].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
 
       setTestimonials(sortedTestimonials);
