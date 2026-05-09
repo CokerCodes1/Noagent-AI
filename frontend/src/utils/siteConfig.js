@@ -19,7 +19,7 @@ export const SITE_SOCIAL_LINKS = [
     key: "tiktok",
     name: "TikTok",
     shortLabel: "Watch",
-    href: "https://tiktok.com/@noagentnaija",
+    href: "https://tiktok.com/@noagentai_official",
     description: "Short-form tours, rental tips, and fast wins from our community.",
     theme: "tiktok"
   },
@@ -27,7 +27,7 @@ export const SITE_SOCIAL_LINKS = [
     key: "facebook",
     name: "Facebook",
     shortLabel: "Join",
-    href: "https://facebook.com/noagentnaija",
+    href: "https://www.facebook.com/share/1Jaur7x7pX/",
     description: "Stay close to listing drops, updates, and conversations from renters.",
     theme: "facebook"
   },
@@ -35,7 +35,7 @@ export const SITE_SOCIAL_LINKS = [
     key: "instagram",
     name: "Instagram",
     shortLabel: "Explore",
-    href: "https://instagram.com/noagentnaija",
+    href: "https://www.instagram.com/noagentai_official?igsh=MWU1ZzM5dGViOHd2cA==",
     description: "Swipe through premium visuals, home inspiration, and technician spotlights.",
     theme: "instagram"
   },
@@ -43,7 +43,7 @@ export const SITE_SOCIAL_LINKS = [
     key: "x",
     name: "X",
     shortLabel: "Follow",
-    href: "https://twitter.com/noagentnaija",
+    href: "https://x.com/Cokarproperties",
     description: "Get real-time tips, launch news, and direct connection success stories.",
     theme: "x"
   },
@@ -51,7 +51,7 @@ export const SITE_SOCIAL_LINKS = [
     key: "youtube",
     name: "YouTube",
     shortLabel: "Subscribe",
-    href: "https://youtube.com/@noagentnaija",
+    href: "https://www.youtube.com/@NoagentAI_Official",
     description: "Long-form walkthroughs, property education, and platform deep dives.",
     theme: "youtube"
   }
@@ -65,3 +65,4 @@ export const HOMEPAGE_MEDIA = {
   techniciansImage: "/technicianphoto.png",
   testimonialsVideo: "/uploads/1775159435148-tour.mp4"
 };
+
