@@ -1,4 +1,7 @@
 import AdminStatCard from "./AdminStatCard.jsx";
+import usePagination from "../../hooks/usePagination.js";
+import PaginatedContent from "../shared/PaginatedContent.jsx";
+import PaginationControls from "../shared/PaginationControls.jsx";
 import { formatCurrency, formatDate } from "./adminConfig.js";
 import { FiCreditCard, FiDollarSign } from "react-icons/fi";
 
@@ -8,6 +11,8 @@ export default function AdminRevenueSection({
   revenueSummary,
   transactions
 }) {
+  const transactionsPagination = usePagination(transactions);
+
   if (revenueLoading) {
     return <div className="status-card">Loading revenue...</div>;
   }
@@ -42,8 +47,12 @@ export default function AdminRevenueSection({
         {transactions.length === 0 ? (
           <div className="status-card">No successful transactions recorded yet.</div>
         ) : (
-          <div className="dashboard-list">
-            {transactions.map((transaction) => (
+          <>
+            <PaginatedContent
+              className="dashboard-list"
+              pageKey={`transactions-${transactionsPagination.currentPage}`}
+            >
+              {transactionsPagination.pageItems.map((transaction) => (
               <article key={transaction.id} className="listing-row compact revenue-row">
                 <div className="listing-copy">
                   <div className="admin-user-heading">
@@ -64,8 +73,22 @@ export default function AdminRevenueSection({
                   <strong>{formatDate(transaction.paid_at)}</strong>
                 </div>
               </article>
-            ))}
-          </div>
+              ))}
+            </PaginatedContent>
+
+            <PaginationControls
+              currentPage={transactionsPagination.currentPage}
+              endIndex={transactionsPagination.endIndex}
+              goToNextPage={transactionsPagination.goToNextPage}
+              goToPage={transactionsPagination.goToPage}
+              goToPreviousPage={transactionsPagination.goToPreviousPage}
+              label="payments"
+              pageNumbers={transactionsPagination.pageNumbers}
+              startIndex={transactionsPagination.startIndex}
+              totalItems={transactionsPagination.totalItems}
+              totalPages={transactionsPagination.totalPages}
+            />
+          </>
         )}
       </div>
     </>

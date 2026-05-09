@@ -1,3 +1,7 @@
+import PaginatedContent from "../shared/PaginatedContent.jsx";
+import PaginationControls from "../shared/PaginationControls.jsx";
+import usePagination from "../../hooks/usePagination.js";
+
 export default function AdminUsersSection({
   currentUserId,
   deletingUserId,
@@ -16,6 +20,10 @@ export default function AdminUsersSection({
   usersLoading,
   usersTotal
 }) {
+  const usersPagination = usePagination(filteredUsers, {
+    resetKey: filterRole
+  });
+
   return (
     <div className="grid admin-management-grid">
       <div className="section-card">
@@ -145,8 +153,12 @@ export default function AdminUsersSection({
         ) : filteredUsers.length === 0 ? (
           <div className="status-card">No users found for this filter.</div>
         ) : (
-          <div className="dashboard-list">
-            {filteredUsers.map((managedUser) => (
+          <>
+            <PaginatedContent
+              className="dashboard-list"
+              pageKey={`users-${usersPagination.currentPage}`}
+            >
+              {usersPagination.pageItems.map((managedUser) => (
               <article key={managedUser.id} className="listing-row compact admin-user-row">
                 <div className="listing-copy">
                   <div className="admin-user-heading">
@@ -154,7 +166,13 @@ export default function AdminUsersSection({
                     <span className="pill neutral">{managedUser.role}</span>
                   </div>
                   <p>{managedUser.email}</p>
-                  {managedUser.is_protected ? <p>Reserved admin account</p> : null}
+                  {managedUser.is_protected ? (
+                    <p>
+                      {managedUser.can_edit === false
+                        ? "Reserved admin account. Only the account owner can edit it."
+                        : "Reserved admin account"}
+                    </p>
+                  ) : null}
                   <p>{managedUser.phone || "No phone added"}</p>
                   <p>
                     Listings: {managedUser.properties_count} | Successful unlocks:{" "}
@@ -167,8 +185,9 @@ export default function AdminUsersSection({
                     className="btn secondary"
                     type="button"
                     onClick={() => handleEditUser(managedUser)}
+                    disabled={managedUser.can_edit === false}
                   >
-                    Edit
+                    {managedUser.can_edit === false ? "Locked" : "Edit"}
                   </button>
                   <button
                     className="btn danger"
@@ -188,8 +207,22 @@ export default function AdminUsersSection({
                   </button>
                 </div>
               </article>
-            ))}
-          </div>
+              ))}
+            </PaginatedContent>
+
+            <PaginationControls
+              currentPage={usersPagination.currentPage}
+              endIndex={usersPagination.endIndex}
+              goToNextPage={usersPagination.goToNextPage}
+              goToPage={usersPagination.goToPage}
+              goToPreviousPage={usersPagination.goToPreviousPage}
+              label="users"
+              pageNumbers={usersPagination.pageNumbers}
+              startIndex={usersPagination.startIndex}
+              totalItems={usersPagination.totalItems}
+              totalPages={usersPagination.totalPages}
+            />
+          </>
         )}
       </div>
     </div>

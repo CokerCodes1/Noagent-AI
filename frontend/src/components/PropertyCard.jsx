@@ -4,8 +4,6 @@ import { toast } from "react-toastify";
 import api, { BACKEND_URL, extractErrorMessage } from "../api/axios.js";
 import VideoModal from "./VideoModal.jsx";
 import {
-  formatNaira,
-  getContactFeeNaira,
   getContactPersonLabel,
   getListingPurposeLabel
 } from "../utils/propertyListing.js";
@@ -22,7 +20,6 @@ export default function PropertyCard({ property, onPaymentStateChange }) {
   const contactLabel = property.contact_label || getContactPersonLabel(property.listing_purpose);
   const listingPurposeLabel =
     property.listing_purpose_label || getListingPurposeLabel(property.listing_purpose);
-  const contactFee = getContactFeeNaira(property);
 
   async function handlePayment() {
     const token = localStorage.getItem("token");

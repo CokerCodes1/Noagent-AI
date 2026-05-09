@@ -1,4 +1,7 @@
 import { buildWhatsAppMessageLink } from "../../utils/whatsapp.js";
+import usePagination from "../../hooks/usePagination.js";
+import PaginatedContent from "../shared/PaginatedContent.jsx";
+import PaginationControls from "../shared/PaginationControls.jsx";
 
 export default function LandlordManagementSection({
   tenants,
@@ -7,6 +10,7 @@ export default function LandlordManagementSection({
 }) {
   const overdueTenants = tenants.filter((tenant) => tenant.is_overdue);
   const sanitationTenants = tenants.filter((tenant) => tenant.sanitation_date);
+  const overduePagination = usePagination(overdueTenants);
 
   function messageTenants(collection) {
     collection.forEach((tenant) => {
@@ -69,8 +73,12 @@ export default function LandlordManagementSection({
         {overdueTenants.length === 0 ? (
           <div className="status-card">No overdue tenants right now.</div>
         ) : (
-          <div className="dashboard-list">
-            {overdueTenants.map((tenant) => (
+          <>
+            <PaginatedContent
+              className="dashboard-list"
+              pageKey={`overdue-tenants-${overduePagination.currentPage}`}
+            >
+              {overduePagination.pageItems.map((tenant) => (
               <article key={tenant.id} className="listing-row compact admin-user-row">
                 <div className="listing-copy">
                   <div className="admin-user-heading">
@@ -92,8 +100,22 @@ export default function LandlordManagementSection({
                   </a>
                 </div>
               </article>
-            ))}
-          </div>
+              ))}
+            </PaginatedContent>
+
+            <PaginationControls
+              currentPage={overduePagination.currentPage}
+              endIndex={overduePagination.endIndex}
+              goToNextPage={overduePagination.goToNextPage}
+              goToPage={overduePagination.goToPage}
+              goToPreviousPage={overduePagination.goToPreviousPage}
+              label="overdue tenants"
+              pageNumbers={overduePagination.pageNumbers}
+              startIndex={overduePagination.startIndex}
+              totalItems={overduePagination.totalItems}
+              totalPages={overduePagination.totalPages}
+            />
+          </>
         )}
       </div>
     </div>

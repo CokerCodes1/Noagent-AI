@@ -1,6 +1,9 @@
 import { toast } from "react-toastify";
 import { BACKEND_URL, extractErrorMessage } from "../../api/axios.js";
+import usePagination from "../../hooks/usePagination.js";
 import { formatNaira } from "../../utils/propertyListing.js";
+import PaginatedContent from "../shared/PaginatedContent.jsx";
+import PaginationControls from "../shared/PaginationControls.jsx";
 
 export default function LandlordPropertySection({
   title,
@@ -13,6 +16,10 @@ export default function LandlordPropertySection({
   listingPurpose,
   onStatusChange
 }) {
+  const propertiesPagination = usePagination(properties, {
+    resetKey: listingPurpose
+  });
+
   async function handleSubmit(event) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -114,8 +121,12 @@ export default function LandlordPropertySection({
         {properties.length === 0 ? (
           <div className="status-card">No listings found for this category yet.</div>
         ) : (
-          <div className="dashboard-list">
-            {properties.map((property) => (
+          <>
+            <PaginatedContent
+              className="dashboard-list"
+              pageKey={`${listingPurpose}-properties-${propertiesPagination.currentPage}`}
+            >
+              {propertiesPagination.pageItems.map((property) => (
               <article key={property.id} className="listing-row">
                 {property.images[0] ? (
                   <img src={`${BACKEND_URL}/uploads/${property.images[0]}`} alt={property.type} />
@@ -152,12 +163,26 @@ export default function LandlordPropertySection({
                         : "Already Rented"
                       : listingPurpose === "sale"
                         ? "Mark as Sold"
-                        : "Mark as Rented"}
+                      : "Mark as Rented"}
                   </button>
                 </div>
               </article>
-            ))}
-          </div>
+              ))}
+            </PaginatedContent>
+
+            <PaginationControls
+              currentPage={propertiesPagination.currentPage}
+              endIndex={propertiesPagination.endIndex}
+              goToNextPage={propertiesPagination.goToNextPage}
+              goToPage={propertiesPagination.goToPage}
+              goToPreviousPage={propertiesPagination.goToPreviousPage}
+              label="listings"
+              pageNumbers={propertiesPagination.pageNumbers}
+              startIndex={propertiesPagination.startIndex}
+              totalItems={propertiesPagination.totalItems}
+              totalPages={propertiesPagination.totalPages}
+            />
+          </>
         )}
       </div>
     </div>

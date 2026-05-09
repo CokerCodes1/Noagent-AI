@@ -1,5 +1,8 @@
 import { motion as Motion } from "framer-motion";
 import { useState } from "react";
+import usePagination from "../../hooks/usePagination.js";
+import PaginationControls from "../shared/PaginationControls.jsx";
+import PaginatedContent from "../shared/PaginatedContent.jsx";
 import {
   FiSearch,
   FiTrash2,
@@ -27,7 +30,6 @@ export default function AdminLoanRequestsSection({
   loanRequests,
   loanRequestsError,
   loanRequestsLoading,
-  refreshAdminData,
   deletingRequestId,
   handleDeleteRequest,
 }) {
@@ -42,6 +44,9 @@ export default function AdminLoanRequestsSection({
       request.address?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = filterType === "all" || request.loanType === filterType;
     return matchesSearch && matchesType;
+  });
+  const requestsPagination = usePagination(filteredRequests, {
+    resetKey: `${searchQuery.trim().toLowerCase()}-${filterType}`
   });
 
   if (loanRequestsLoading) {
@@ -103,8 +108,12 @@ export default function AdminLoanRequestsSection({
             )}
           </div>
         ) : (
-          <div className="testimonial-admin-grid">
-            {filteredRequests.map((request, index) => (
+          <>
+            <PaginatedContent
+              className="testimonial-admin-grid"
+              pageKey={`loan-requests-${requestsPagination.currentPage}`}
+            >
+              {requestsPagination.pageItems.map((request, index) => (
               <Motion.article
                 key={request.id}
                 className="testimonial-admin-card"
@@ -194,8 +203,22 @@ export default function AdminLoanRequestsSection({
                   </div>
                 </div>
               </Motion.article>
-            ))}
-          </div>
+              ))}
+            </PaginatedContent>
+
+            <PaginationControls
+              currentPage={requestsPagination.currentPage}
+              endIndex={requestsPagination.endIndex}
+              goToNextPage={requestsPagination.goToNextPage}
+              goToPage={requestsPagination.goToPage}
+              goToPreviousPage={requestsPagination.goToPreviousPage}
+              label="requests"
+              pageNumbers={requestsPagination.pageNumbers}
+              startIndex={requestsPagination.startIndex}
+              totalItems={requestsPagination.totalItems}
+              totalPages={requestsPagination.totalPages}
+            />
+          </>
         )}
       </div>
 

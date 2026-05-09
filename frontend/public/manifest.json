@@ -1,0 +1,120 @@
+{
+  "id": "/?source=pwa",
+  "name": "NoAgentNaija",
+  "short_name": "NoAgent",
+  "description": "Install NoAgentNaija for direct property access, premium role-based dashboards, technician discovery, and offline-ready public browsing.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
+  "orientation": "any",
+  "background_color": "#1d120c",
+  "theme_color": "#b85c38",
+  "lang": "en-NG",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "categories": ["business", "lifestyle", "real-estate"],
+  "icons": [
+    {
+      "src": "/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-narrow-home.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Property browsing flow"
+    },
+    {
+      "src": "/screenshot-narrow-dashboard.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile dashboard workspace"
+    },
+    {
+      "src": "/screenshot-wide-home.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Homepage experience"
+    },
+    {
+      "src": "/screenshot-wide-dashboard.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Role dashboard overview"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Sign In",
+      "short_name": "Login",
+      "description": "Sign in to your renter, landlord, technician, or admin workspace.",
+      "url": "/auth?mode=login",
+      "icons": [
+        {
+          "src": "/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Browse Listings",
+      "short_name": "Listings",
+      "description": "Open available property listings.",
+      "url": "/renter",
+      "icons": [
+        {
+          "src": "/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Find Technicians",
+      "short_name": "Technicians",
+      "description": "Open the technician marketplace.",
+      "url": "/renter/technicians",
+      "icons": [
+        {
+          "src": "/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

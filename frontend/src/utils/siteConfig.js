@@ -59,7 +59,7 @@ export const SITE_SOCIAL_LINKS = [
 
 export const HOMEPAGE_MEDIA = {
   heroVideo: "/hero-clean-optimized.mp4",
-  heroPoster: "/uploads/1775159435145-front.jpg",
+  heroPoster: "/landlordphoto.png",
   rentersImage: "/renterphoto.png",
   landlordsImage: "/landlordphoto.png",
   techniciansImage: "/technicianphoto.png",

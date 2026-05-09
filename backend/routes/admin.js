@@ -122,6 +122,10 @@ function mapManagedUser(row) {
   };
 }
 
+function isReservedAdminEmail(email = "") {
+  return normalizeEmail(email) === ADMIN_EMAIL;
+}
+
 function mapManagedProperty(row) {
   const listingPurpose = normalizeListingPurpose(row.listing_purpose);
 
@@ -406,7 +410,12 @@ router.get("/users", verifyToken, authorizeRoles("admin"), async (req, res, next
       `
     );
 
-    return res.json(rows.map(mapManagedUser));
+    return res.json(
+      rows.map((row) => ({
+        ...mapManagedUser(row),
+        can_edit: !isReservedAdminEmail(row.email) || Number(row.id) === Number(req.user.id)
+      }))
+    );
   } catch (error) {
     return next(error);
   }
@@ -522,12 +531,27 @@ router.put("/users/:id", verifyToken, authorizeRoles("admin"), async (req, res, 
       return res.status(404).json({ message: "User not found." });
     }
 
+    if (isReservedAdminEmail(existingUser.email) && Number(req.user.id) !== userId) {
+      return res.status(403).json({
+        message: "Only the owner of the reserved admin account can edit this account."
+      });
+    }
+
     if (
       normalizeEmail(existingUser.email) === ADMIN_EMAIL &&
       normalizedRole !== "admin"
     ) {
       return res.status(400).json({
         message: "The reserved admin account cannot be reassigned to another role."
+      });
+    }
+
+    if (
+      isReservedAdminEmail(normalizedEmail) &&
+      !isReservedAdminEmail(existingUser.email)
+    ) {
+      return res.status(403).json({
+        message: "This reserved admin email cannot be assigned to another account."
       });
     }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+  import { useEffect, useRef, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import api, { extractErrorMessage } from "../api/axios.js";
@@ -16,10 +16,15 @@ import {
   emptyManagedUserForm,
   emptyOverview,
   getCurrentSection,
+  navOrder,
   roleLabel,
 } from "../components/admin/adminConfig.js";
 import { emptyTechnicianProfileForm } from "../components/technicians/technicianConfig.js";
+import MobileDashboardLayout from "../components/dashboard/MobileDashboardLayout.jsx";
 import DashboardHeader from "../components/DashboardHeader.jsx";
+import useIsPhoneViewport from "../hooks/useIsPhoneViewport.js";
+import { useTestimonials } from "../contexts/TestimonialsContext.jsx";
+import PwaSettings from "../components/settings/PwaSettings.jsx";
 import { clearAuthSession, getStoredUser } from "../utils/session.js";
 import { resolveTechnicianCategoryOption } from "../utils/technicianCategories.js";
 
@@ -36,6 +41,7 @@ function handleDashboardRequestError(requestError, setError) {
 export default function AdminDashboard() {
   const location = useLocation();
   const user = getStoredUser();
+  const isPhoneViewport = useIsPhoneViewport();
   const activeSection = getCurrentSection(location.pathname);
   const propertyImagesInputRef = useRef(null);
   const propertyVideoInputRef = useRef(null);
@@ -200,12 +206,15 @@ export default function AdminDashboard() {
     };
   }, [refreshToken]);
 
+  const { refreshTestimonials } = useTestimonials();
+
   if (!activeSection) {
     return <Navigate to="/admin" replace />;
   }
 
   function refreshAdminData() {
     setRefreshToken((currentValue) => currentValue + 1);
+    refreshTestimonials();
   }
 
   function updateUserField(field, value) {
@@ -291,6 +300,11 @@ export default function AdminDashboard() {
   }
 
   function handleEditUser(managedUser) {
+    if (managedUser.can_edit === false) {
+      toast.error("Only the owner of this reserved admin account can edit it.");
+      return;
+    }
+
     setEditingUserId(managedUser.id);
     setManagedUserForm({
       name: managedUser.name,
@@ -570,6 +584,148 @@ export default function AdminDashboard() {
     (managedUser) => managedUser.role === "landlord",
   );
   const section = adminSections[activeSection];
+  const mobileItems = navOrder.map((sectionKey) => ({
+    key: sectionKey,
+    title: adminSections[sectionKey].title,
+    description: adminSections[sectionKey].subtitle,
+    path: adminSections[sectionKey].path,
+    icon: adminSections[sectionKey].icon,
+  }));
+  const sectionContent = (
+    <section className="dashboard-section admin-content-section">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Admin Workspace</p>
+          <h1>{section.title}</h1>
+        </div>
+        <p>{section.subtitle}</p>
+      </div>
+
+      {activeSection === "dashboard" ? (
+        <>
+          <AdminOverviewSection
+            dashboardError={dashboardError}
+            dashboardLoading={dashboardLoading}
+            overview={overview}
+          />
+          <PwaSettings role={user?.role || "admin"} />
+        </>
+      ) : null}
+
+      {activeSection === "users" ? (
+        <AdminUsersSection
+          currentUserId={user?.id}
+          deletingUserId={deletingUserId}
+          filterRole={filterRole}
+          filteredUsers={filteredUsers}
+          handleDeleteUser={handleDeleteUser}
+          handleEditUser={handleEditUser}
+          handleManagedUserSubmit={handleManagedUserSubmit}
+          isEditingUser={Boolean(editingUserId)}
+          managedUserForm={managedUserForm}
+          resetManagedUserForm={resetManagedUserForm}
+          setFilterRole={setFilterRole}
+          submittingUser={submittingUser}
+          updateUserField={updateUserField}
+          usersError={usersError}
+          usersLoading={usersLoading}
+          usersTotal={managedUsers.length}
+        />
+      ) : null}
+
+      {activeSection === "properties" ? (
+        <AdminPropertiesSection
+          deletingPropertyId={deletingPropertyId}
+          filteredProperties={filteredProperties}
+          handleDeleteProperty={handleDeleteProperty}
+          handleEditProperty={handleEditProperty}
+          handleManagedPropertySubmit={handleManagedPropertySubmit}
+          isEditingProperty={Boolean(editingPropertyId)}
+          landlords={landlords}
+          managedProperties={managedProperties}
+          managedPropertyForm={managedPropertyForm}
+          propertiesError={propertiesError}
+          propertiesLoading={propertiesLoading}
+          propertyFilter={propertyFilter}
+          propertyImagesInputRef={propertyImagesInputRef}
+          propertyVideoInputRef={propertyVideoInputRef}
+          resetManagedPropertyForm={resetManagedPropertyForm}
+          setPropertyFilter={setPropertyFilter}
+          submittingProperty={submittingProperty}
+          updatePropertyField={updatePropertyField}
+        />
+      ) : null}
+
+      {activeSection === "technicians" ? (
+        <AdminTechniciansSection
+          deletingTechnicianId={deletingTechnicianId}
+          editingTechnicianId={editingTechnicianId}
+          filterCategory={filterCategory}
+          handleDeleteTechnician={handleDeleteTechnician}
+          handleEditTechnician={handleEditTechnician}
+          handleSubmit={handleTechnicianSubmit}
+          imagesInputRef={technicianImagesInputRef}
+          resetForm={resetTechnicianForm}
+          setFilterCategory={setFilterCategory}
+          submittingTechnician={submittingTechnician}
+          technicianForm={technicianForm}
+          technicians={managedTechnicians}
+          techniciansError={techniciansError}
+          techniciansLoading={techniciansLoading}
+          updateTechnicianField={updateTechnicianField}
+          videoInputRef={technicianVideoInputRef}
+        />
+      ) : null}
+
+      {activeSection === "testimonials" ? (
+        <AdminTestimonialsSection
+          testimonials={testimonials}
+          testimonialsError={testimonialsError}
+          testimonialsLoading={testimonialsLoading}
+          refreshAdminData={refreshAdminData}
+        />
+      ) : null}
+
+      {activeSection === "revenue" ? (
+        <AdminRevenueSection
+          revenueError={revenueError}
+          revenueLoading={revenueLoading}
+          revenueSummary={revenueSummary}
+          transactions={transactions}
+        />
+      ) : null}
+
+      {activeSection === "loanRequests" ? (
+              <AdminLoanRequestsSection
+                loanRequests={loanRequests}
+                loanRequestsError={loanRequestsError}
+                loanRequestsLoading={loanRequestsLoading}
+                deletingRequestId={deletingRequestId}
+                handleDeleteRequest={handleDeleteRequest}
+              />
+      ) : null}
+    </section>
+  );
+
+  if (isPhoneViewport) {
+    return (
+      <div className="dashboard-shell">
+        <MobileDashboardLayout
+          activeSectionKey={activeSection}
+          basePath="/admin"
+          defaultSectionKey="dashboard"
+          items={mobileItems}
+          sectionDescription={section.subtitle}
+          sectionTitle={section.title}
+          user={user}
+          workspaceDescription="Manage platform activity from one organized workspace."
+          workspaceTitle="Admin Console"
+        >
+          {sectionContent}
+        </MobileDashboardLayout>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-shell">
@@ -582,117 +738,7 @@ export default function AdminDashboard() {
             subtitle={section.subtitle}
           />
 
-          <section className="dashboard-section admin-content-section">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Admin Workspace</p>
-                <h1>{section.title}</h1>
-              </div>
-              <p>{section.subtitle}</p>
-            </div>
-
-            {activeSection === "dashboard" ? (
-              <AdminOverviewSection
-                dashboardError={dashboardError}
-                dashboardLoading={dashboardLoading}
-                overview={overview}
-              />
-            ) : null}
-
-            {activeSection === "users" ? (
-              <AdminUsersSection
-                currentUserId={user?.id}
-                deletingUserId={deletingUserId}
-                filterRole={filterRole}
-                filteredUsers={filteredUsers}
-                handleDeleteUser={handleDeleteUser}
-                handleEditUser={handleEditUser}
-                handleManagedUserSubmit={handleManagedUserSubmit}
-                isEditingUser={Boolean(editingUserId)}
-                managedUserForm={managedUserForm}
-                resetManagedUserForm={resetManagedUserForm}
-                setFilterRole={setFilterRole}
-                submittingUser={submittingUser}
-                updateUserField={updateUserField}
-                usersError={usersError}
-                usersLoading={usersLoading}
-                usersTotal={managedUsers.length}
-              />
-            ) : null}
-
-            {activeSection === "properties" ? (
-              <AdminPropertiesSection
-                deletingPropertyId={deletingPropertyId}
-                filteredProperties={filteredProperties}
-                handleDeleteProperty={handleDeleteProperty}
-                handleEditProperty={handleEditProperty}
-                handleManagedPropertySubmit={handleManagedPropertySubmit}
-                isEditingProperty={Boolean(editingPropertyId)}
-                landlords={landlords}
-                managedProperties={managedProperties}
-                managedPropertyForm={managedPropertyForm}
-                propertiesError={propertiesError}
-                propertiesLoading={propertiesLoading}
-                propertyFilter={propertyFilter}
-                propertyImagesInputRef={propertyImagesInputRef}
-                propertyVideoInputRef={propertyVideoInputRef}
-                resetManagedPropertyForm={resetManagedPropertyForm}
-                setPropertyFilter={setPropertyFilter}
-                submittingProperty={submittingProperty}
-                updatePropertyField={updatePropertyField}
-              />
-            ) : null}
-
-            {activeSection === "technicians" ? (
-              <AdminTechniciansSection
-                deletingTechnicianId={deletingTechnicianId}
-                editingTechnicianId={editingTechnicianId}
-                filterCategory={filterCategory}
-                handleDeleteTechnician={handleDeleteTechnician}
-                handleEditTechnician={handleEditTechnician}
-                handleSubmit={handleTechnicianSubmit}
-                imagesInputRef={technicianImagesInputRef}
-                resetForm={resetTechnicianForm}
-                setFilterCategory={setFilterCategory}
-                submittingTechnician={submittingTechnician}
-                technicianForm={technicianForm}
-                technicians={managedTechnicians}
-                techniciansError={techniciansError}
-                techniciansLoading={techniciansLoading}
-                updateTechnicianField={updateTechnicianField}
-                videoInputRef={technicianVideoInputRef}
-              />
-            ) : null}
-
-            {activeSection === "testimonials" ? (
-              <AdminTestimonialsSection
-                testimonials={testimonials}
-                testimonialsError={testimonialsError}
-                testimonialsLoading={testimonialsLoading}
-                refreshAdminData={refreshAdminData}
-              />
-            ) : null}
-
-            {activeSection === "revenue" ? (
-              <AdminRevenueSection
-                revenueError={revenueError}
-                revenueLoading={revenueLoading}
-                revenueSummary={revenueSummary}
-                transactions={transactions}
-              />
-            ) : null}
-
-            {activeSection === "loanRequests" ? (
-              <AdminLoanRequestsSection
-                loanRequests={loanRequests}
-                loanRequestsError={loanRequestsError}
-                loanRequestsLoading={loanRequestsLoading}
-                refreshAdminData={refreshAdminData}
-                deletingRequestId={deletingRequestId}
-                handleDeleteRequest={handleDeleteRequest}
-              />
-            ) : null}
-          </section>
+          {sectionContent}
         </main>
       </div>
     </div>

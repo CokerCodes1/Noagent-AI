@@ -2,7 +2,6 @@ import { motion as Motion } from "framer-motion";
 import { FiClock, FiHome, FiMapPin, FiShield } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { HOMEPAGE_MEDIA } from "../../utils/siteConfig.js";
-import { resolveMediaUrl } from "../../utils/media.js";
 import Reveal from "./Reveal.jsx";
 import { fadeInUp, staggerChildren } from "./homepageMotion.js";
 

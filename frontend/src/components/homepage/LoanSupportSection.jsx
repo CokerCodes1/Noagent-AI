@@ -84,7 +84,7 @@ export default function LoanSupportSection() {
                 </div>
 
                 <div style={{ minWidth: 0 }}>
-                  <h3 style={{ color: '#FFD700' }}>{card.title}</h3>
+                  <h3 style={{ color: '#D2691E' }}>{card.title}</h3>
                   <p>{card.description}</p>
 
                   <button

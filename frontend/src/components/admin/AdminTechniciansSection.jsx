@@ -1,4 +1,7 @@
 import { BACKEND_URL } from "../../api/axios.js";
+import usePagination from "../../hooks/usePagination.js";
+import PaginatedContent from "../shared/PaginatedContent.jsx";
+import PaginationControls from "../shared/PaginationControls.jsx";
 import TechnicianProfileFields from "../technicians/TechnicianProfileFields.jsx";
 
 function resolveTechnicianImage(technician) {
@@ -41,6 +44,9 @@ export default function AdminTechniciansSection({
         .filter(Boolean)
     )
   ).sort((left, right) => left.localeCompare(right));
+  const techniciansPagination = usePagination(filteredTechnicians, {
+    resetKey: filterCategory
+  });
 
   return (
     <div className="grid admin-management-grid">
@@ -127,8 +133,12 @@ export default function AdminTechniciansSection({
         ) : filteredTechnicians.length === 0 ? (
           <div className="status-card">No technicians found for this filter.</div>
         ) : (
-          <div className="dashboard-list">
-            {filteredTechnicians.map((technician) => {
+          <>
+            <PaginatedContent
+              className="dashboard-list"
+              pageKey={`technicians-${techniciansPagination.currentPage}`}
+            >
+              {techniciansPagination.pageItems.map((technician) => {
               const imageUrl = resolveTechnicianImage(technician);
 
               return (
@@ -172,8 +182,22 @@ export default function AdminTechniciansSection({
                   </div>
                 </article>
               );
-            })}
-          </div>
+              })}
+            </PaginatedContent>
+
+            <PaginationControls
+              currentPage={techniciansPagination.currentPage}
+              endIndex={techniciansPagination.endIndex}
+              goToNextPage={techniciansPagination.goToNextPage}
+              goToPage={techniciansPagination.goToPage}
+              goToPreviousPage={techniciansPagination.goToPreviousPage}
+              label="technicians"
+              pageNumbers={techniciansPagination.pageNumbers}
+              startIndex={techniciansPagination.startIndex}
+              totalItems={techniciansPagination.totalItems}
+              totalPages={techniciansPagination.totalPages}
+            />
+          </>
         )}
       </div>
     </div>

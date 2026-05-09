@@ -1,4 +1,7 @@
 import { BACKEND_URL } from "../../api/axios.js";
+import usePagination from "../../hooks/usePagination.js";
+import PaginatedContent from "../shared/PaginatedContent.jsx";
+import PaginationControls from "../shared/PaginationControls.jsx";
 import AdminStatCard from "./AdminStatCard.jsx";
 import {
   dashboardStats,
@@ -32,6 +35,9 @@ export default function AdminOverviewSection({
   dashboardLoading,
   overview
 }) {
+  const propertiesPagination = usePagination(overview.properties);
+  const transactionsPagination = usePagination(overview.recentTransactions);
+
   if (dashboardLoading) {
     return <div className="status-card">Loading admin dashboard...</div>;
   }
@@ -64,9 +70,13 @@ export default function AdminOverviewSection({
           {overview.properties.length === 0 ? (
             <div className="status-card">No properties found.</div>
           ) : (
-            <div className="dashboard-list">
-              {overview.properties.map((property) => (
-                <article key={property.id} className="listing-row">
+            <>
+              <PaginatedContent
+                className="dashboard-list"
+                pageKey={`overview-properties-${propertiesPagination.currentPage}`}
+              >
+                {propertiesPagination.pageItems.map((property, index) => (
+                <article key={property.id ?? `property-${index}`} className="listing-row">
                   {property.images[0] ? (
                     <img
                       src={`${BACKEND_URL}/uploads/${property.images[0]}`}
@@ -93,8 +103,22 @@ export default function AdminOverviewSection({
                     <span>{formatDate(property.created_at)}</span>
                   </div>
                 </article>
-              ))}
-            </div>
+                ))}
+              </PaginatedContent>
+
+              <PaginationControls
+                currentPage={propertiesPagination.currentPage}
+                endIndex={propertiesPagination.endIndex}
+                goToNextPage={propertiesPagination.goToNextPage}
+                goToPage={propertiesPagination.goToPage}
+                goToPreviousPage={propertiesPagination.goToPreviousPage}
+                label="listings"
+                pageNumbers={propertiesPagination.pageNumbers}
+                startIndex={propertiesPagination.startIndex}
+                totalItems={propertiesPagination.totalItems}
+                totalPages={propertiesPagination.totalPages}
+              />
+            </>
           )}
         </div>
 
@@ -109,9 +133,13 @@ export default function AdminOverviewSection({
           {overview.recentTransactions.length === 0 ? (
             <div className="status-card">No successful transactions yet.</div>
           ) : (
-            <div className="dashboard-list">
-              {overview.recentTransactions.map((transaction) => (
-                <article key={transaction.id} className="listing-row compact">
+            <>
+              <PaginatedContent
+                className="dashboard-list"
+                pageKey={`overview-transactions-${transactionsPagination.currentPage}`}
+              >
+                {transactionsPagination.pageItems.map((transaction, index) => (
+                <article key={transaction.id ?? `transaction-${index}`} className="listing-row compact">
                   <div className="listing-copy">
                     <h3>{formatCurrency(transaction.amount_paid / 100)}</h3>
                     <p>{transaction.property_type || "Property removed"}</p>
@@ -124,8 +152,22 @@ export default function AdminOverviewSection({
                     <span>{formatDate(transaction.paid_at)}</span>
                   </div>
                 </article>
-              ))}
-            </div>
+                ))}
+              </PaginatedContent>
+
+              <PaginationControls
+                currentPage={transactionsPagination.currentPage}
+                endIndex={transactionsPagination.endIndex}
+                goToNextPage={transactionsPagination.goToNextPage}
+                goToPage={transactionsPagination.goToPage}
+                goToPreviousPage={transactionsPagination.goToPreviousPage}
+                label="transactions"
+                pageNumbers={transactionsPagination.pageNumbers}
+                startIndex={transactionsPagination.startIndex}
+                totalItems={transactionsPagination.totalItems}
+                totalPages={transactionsPagination.totalPages}
+              />
+            </>
           )}
         </div>
       </div>

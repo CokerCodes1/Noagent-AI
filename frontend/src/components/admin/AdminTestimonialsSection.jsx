@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import api, { extractErrorMessage } from "../../api/axios.js";
+import usePagination from "../../hooks/usePagination.js";
 import { getInitials, resolveMediaUrl } from "../../utils/media.js";
+import PaginatedContent from "../shared/PaginatedContent.jsx";
+import PaginationControls from "../shared/PaginationControls.jsx";
 
 const emptyTestimonialForm = {
   name: "",
@@ -46,6 +49,7 @@ export default function AdminTestimonialsSection({
   const [deletingTestimonialId, setDeletingTestimonialId] = useState(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const [videoFileName, setVideoFileName] = useState("");
+  const testimonialsPagination = usePagination(testimonials);
 
   useEffect(() => {
     return () => {
@@ -379,8 +383,12 @@ export default function AdminTestimonialsSection({
             <p>No testimonials yet. Create the first one from the editor.</p>
           </div>
         ) : (
-          <div className="testimonial-admin-grid">
-            {testimonials.map((testimonial) => (
+          <>
+            <PaginatedContent
+              className="testimonial-admin-grid"
+              pageKey={`testimonials-${testimonialsPagination.currentPage}`}
+            >
+              {testimonialsPagination.pageItems.map((testimonial) => (
               <article key={testimonial.id} className="testimonial-admin-card">
                 <div className="testimonial-admin-card-head">
                   <div className="testimonial-admin-avatar">
@@ -429,8 +437,22 @@ export default function AdminTestimonialsSection({
                   </div>
                 </div>
               </article>
-            ))}
-          </div>
+              ))}
+            </PaginatedContent>
+
+            <PaginationControls
+              currentPage={testimonialsPagination.currentPage}
+              endIndex={testimonialsPagination.endIndex}
+              goToNextPage={testimonialsPagination.goToNextPage}
+              goToPage={testimonialsPagination.goToPage}
+              goToPreviousPage={testimonialsPagination.goToPreviousPage}
+              label="testimonials"
+              pageNumbers={testimonialsPagination.pageNumbers}
+              startIndex={testimonialsPagination.startIndex}
+              totalItems={testimonialsPagination.totalItems}
+              totalPages={testimonialsPagination.totalPages}
+            />
+          </>
         )}
       </section>
     </div>

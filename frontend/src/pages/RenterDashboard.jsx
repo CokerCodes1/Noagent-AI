@@ -4,6 +4,7 @@ import { io } from "socket.io-client";
 import { toast } from "react-toastify";
 import api, { BACKEND_URL, extractErrorMessage } from "../api/axios.js";
 import DashboardHeader from "../components/DashboardHeader.jsx";
+import MobileDashboardLayout from "../components/dashboard/MobileDashboardLayout.jsx";
 import Hero from "../components/Hero.jsx";
 import {
   getCurrentRenterSection,
@@ -11,9 +12,14 @@ import {
   renterSections
 } from "../components/renter/renterConfig.js";
 import PropertyCard from "../components/PropertyCard.jsx";
+import PaginatedContent from "../components/shared/PaginatedContent.jsx";
+import PaginationControls from "../components/shared/PaginationControls.jsx";
 import SkeletonCard from "../components/SkeletonCard.jsx";
 import TechnicianMarketplaceSection from "../components/technicians/TechnicianMarketplaceSection.jsx";
 import WorkspaceSidebar from "../components/workspace/WorkspaceSidebar.jsx";
+import usePagination from "../hooks/usePagination.js";
+import useIsPhoneViewport from "../hooks/useIsPhoneViewport.js";
+import PwaSettings from "../components/settings/PwaSettings.jsx";
 import { clearAuthSession, getStoredUser } from "../utils/session.js";
 
 function applyFilters(properties, filters) {
@@ -37,6 +43,7 @@ function applyFilters(properties, filters) {
 export default function RenterDashboard() {
   const location = useLocation();
   const user = getStoredUser();
+  const isPhoneViewport = useIsPhoneViewport();
   const activeSection = getCurrentRenterSection(location.pathname);
   const [allProperties, setAllProperties] = useState([]);
   const [filters, setFilters] = useState({});
@@ -87,11 +94,15 @@ export default function RenterDashboard() {
     };
   }, []);
 
+  const filteredProperties = applyFilters(allProperties, filters);
+  const propertiesPagination = usePagination(filteredProperties, {
+    resetKey: `${filters.location || ""}-${filters.type || ""}-${filters.price || ""}`
+  });
+
   if (!activeSection) {
     return <Navigate to="/renter" replace />;
   }
 
-  const filteredProperties = applyFilters(allProperties, filters);
   const section = renterSections[activeSection];
   const summary = (
     <>
@@ -103,6 +114,107 @@ export default function RenterDashboard() {
       </div>
     </>
   );
+  const mobileItems = renterNavOrder.map((sectionKey) => ({
+    key: sectionKey,
+    title: renterSections[sectionKey].label,
+    description: renterSections[sectionKey].description,
+    path: renterSections[sectionKey].path,
+    icon: renterSections[sectionKey].icon
+  }));
+  const sectionContent = (
+    <>
+      {activeSection === "properties" ? (
+        <>
+          <Hero
+            title={`Welcome back${user?.name ? `, ${user.name}` : ""}`}
+            subtitle="Browse verified properties for rent and sale, unlock verified owner contact, and get real-time listing updates."
+            onSearch={setFilters}
+          />
+
+          <section className="dashboard-section admin-content-section">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Renter Dashboard</p>
+                <h2>Available Properties</h2>
+              </div>
+              <p>{filteredProperties.length} properties match your filters</p>
+            </div>
+
+            {error ? <div className="status-card error">{error}</div> : null}
+
+            {loading ? (
+              <div className="grid">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <SkeletonCard key={index} />
+                ))}
+              </div>
+            ) : filteredProperties.length === 0 ? (
+              <div className="status-card">
+                No properties matched your current filters.
+              </div>
+            ) : (
+              <>
+                <PaginatedContent
+                  className="grid"
+                  pageKey={`renter-properties-${propertiesPagination.currentPage}`}
+                >
+                  {propertiesPagination.pageItems.map((property) => (
+                    <PropertyCard
+                      key={property.id}
+                      property={property}
+                      onPaymentStateChange={loadProperties}
+                    />
+                  ))}
+                </PaginatedContent>
+
+                <PaginationControls
+                  currentPage={propertiesPagination.currentPage}
+                  endIndex={propertiesPagination.endIndex}
+                  goToNextPage={propertiesPagination.goToNextPage}
+                  goToPage={propertiesPagination.goToPage}
+                  goToPreviousPage={propertiesPagination.goToPreviousPage}
+                  label="properties"
+                  pageNumbers={propertiesPagination.pageNumbers}
+                  startIndex={propertiesPagination.startIndex}
+                  totalItems={propertiesPagination.totalItems}
+                  totalPages={propertiesPagination.totalPages}
+                />
+              </>
+            )}
+
+            <PwaSettings role={user?.role || "renter"} />
+          </section>
+        </>
+      ) : null}
+
+      {activeSection === "technicians" ? (
+        <TechnicianMarketplaceSection
+          title="Technicians You Can Contact"
+          subtitle="Browse technicians, view their skills, and contact them directly from your renter workspace."
+        />
+      ) : null}
+    </>
+  );
+
+  if (isPhoneViewport) {
+    return (
+      <div className="dashboard-shell">
+        <MobileDashboardLayout
+          activeSectionKey={activeSection}
+          basePath="/renter"
+          defaultSectionKey="properties"
+          items={mobileItems}
+          sectionDescription={section.description}
+          sectionTitle={section.label}
+          user={user}
+          workspaceDescription="Move between property discovery and technician contacts from one clean mobile workspace."
+          workspaceTitle="Renter Workspace"
+        >
+          {sectionContent}
+        </MobileDashboardLayout>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-shell">
@@ -121,56 +233,7 @@ export default function RenterDashboard() {
             subtitle={section.description}
           />
 
-          {activeSection === "properties" ? (
-            <>
-              <Hero
-                title={`Welcome back${user?.name ? `, ${user.name}` : ""}`}
-                subtitle="Browse verified properties for rent and sale, unlock verified owner contact, and get real-time listing updates."
-                onSearch={setFilters}
-              />
-
-              <section className="dashboard-section admin-content-section">
-                <div className="section-heading">
-                  <div>
-                    <p className="eyebrow">Renter Dashboard</p>
-                    <h2>Available Properties</h2>
-                  </div>
-                  <p>{filteredProperties.length} properties match your filters</p>
-                </div>
-
-                {error ? <div className="status-card error">{error}</div> : null}
-
-                {loading ? (
-                  <div className="grid">
-                    {Array.from({ length: 3 }).map((_, index) => (
-                      <SkeletonCard key={index} />
-                    ))}
-                  </div>
-                ) : filteredProperties.length === 0 ? (
-                  <div className="status-card">
-                    No properties matched your current filters.
-                  </div>
-                ) : (
-                  <div className="grid">
-                    {filteredProperties.map((property) => (
-                      <PropertyCard
-                        key={property.id}
-                        property={property}
-                        onPaymentStateChange={loadProperties}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
-            </>
-          ) : null}
-
-          {activeSection === "technicians" ? (
-            <TechnicianMarketplaceSection
-              title="Technicians You Can Contact"
-              subtitle="Browse technicians, view their skills, and contact them directly from your renter workspace."
-            />
-          ) : null}
+          {sectionContent}
         </main>
       </div>
     </div>

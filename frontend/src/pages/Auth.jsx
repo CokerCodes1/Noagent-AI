@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import { FiKey, FiLock, FiMail, FiPhone, FiUser, FiX } from "react-icons/fi";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import api, { extractErrorMessage } from "../api/axios.js";
+import { prefetchRoute } from "../utils/routePrefetch.js";
 import { getDashboardPath, setAuthSession } from "../utils/session.js";
 
 const initialForm = {
@@ -168,11 +169,15 @@ export default function Auth() {
           };
 
       const response = await api.post(endpoint, payload);
+      const destination = getDashboardPath(response.data.user.role);
+      prefetchRoute(destination);
       setAuthSession(response.data);
       toast.success(
         isSignup ? "Account created successfully." : "Login successful.",
       );
-      navigate(getDashboardPath(response.data.user.role), { replace: true });
+      startTransition(() => {
+        navigate(destination, { replace: true });
+      });
     } catch (error) {
       toast.error(extractErrorMessage(error));
     } finally {
@@ -213,10 +218,14 @@ export default function Auth() {
         newPassword: resetForm.newPassword,
       });
 
+      const destination = getDashboardPath(response.data.user.role);
+      prefetchRoute(destination);
       setAuthSession(response.data);
       toast.success("Password reset successful. You are now logged in.");
       closeResetModal(true);
-      navigate(getDashboardPath(response.data.user.role), { replace: true });
+      startTransition(() => {
+        navigate(destination, { replace: true });
+      });
     } catch (error) {
       toast.error(extractErrorMessage(error));
     } finally {
@@ -237,9 +246,13 @@ export default function Auth() {
         token: credentialResponse.credential,
       });
 
+      const destination = getDashboardPath(response.data.user.role);
+      prefetchRoute(destination);
       setAuthSession(response.data);
       toast.success("Google login successful.");
-      navigate(getDashboardPath(response.data.user.role), { replace: true });
+      startTransition(() => {
+        navigate(destination, { replace: true });
+      });
     } catch (error) {
       toast.error(extractErrorMessage(error));
     } finally {

@@ -4,6 +4,7 @@ import { FiArrowRight, FiPlayCircle, FiTool } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { fadeInUp, staggerChildren } from "./homepageMotion.js";
 import { resolveMediaUrl } from "../../utils/media.js";
+import { prefetchRoute } from "../../utils/routePrefetch.js";
 import { HOMEPAGE_MEDIA } from "../../utils/siteConfig.js";
 import Reveal from "./Reveal.jsx";
 
@@ -31,6 +32,10 @@ const heroStats = [
 export default function HeroSection() {
   const navigate = useNavigate();
   const heroVideoRef = useRef(null);
+
+  function warmRoute(path) {
+    prefetchRoute(path);
+  }
 
   const keepHeroVideoPlaying = useEffectEvent(() => {
     const video = heroVideoRef.current;
@@ -83,7 +88,7 @@ export default function HeroSection() {
       video.removeEventListener("ended", handleVideoLoop);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [keepHeroVideoPlaying]);
+  }, []);
 
   return (
     <section className="homepage-hero">
@@ -94,7 +99,7 @@ export default function HeroSection() {
         loop
         muted
         playsInline
-        preload="auto"
+        preload="metadata"
         aria-hidden="true"
         poster={resolveMediaUrl(HOMEPAGE_MEDIA.heroPoster)}
       >
@@ -143,6 +148,9 @@ export default function HeroSection() {
                 type="button"
                 className="btn primary homepage-cta-primary"
                 onClick={() => navigate("/auth?mode=signup")}
+                onMouseEnter={() => warmRoute("/auth")}
+                onFocus={() => warmRoute("/auth")}
+                onTouchStart={() => warmRoute("/auth")}
               >
                 <FiArrowRight />
                 Get Started
@@ -151,6 +159,9 @@ export default function HeroSection() {
                 type="button"
                 className="btn secondary homepage-cta-secondary"
                 onClick={() => navigate("/auth?mode=login")}
+                onMouseEnter={() => warmRoute("/auth")}
+                onFocus={() => warmRoute("/auth")}
+                onTouchStart={() => warmRoute("/auth")}
               >
                 <FiPlayCircle />
                 Login
@@ -159,6 +170,9 @@ export default function HeroSection() {
                 type="button"
                 className="btn secondary homepage-cta-secondary"
                 onClick={() => navigate("/auth?mode=signup&role=technician")}
+                onMouseEnter={() => warmRoute("/auth")}
+                onFocus={() => warmRoute("/auth")}
+                onTouchStart={() => warmRoute("/auth")}
               >
                 <FiTool />
                 Join as Technician

@@ -585,6 +585,328 @@ textarea {
   min-width: 0;
 }
 
+.mobile-dashboard-shell {
+  width: min(100%, 540px);
+  margin: 0 auto;
+}
+
+.mobile-dashboard-menu-screen,
+.mobile-dashboard-section-screen,
+.mobile-dashboard-menu-list,
+.mobile-dashboard-section-content {
+  display: grid;
+  gap: 1rem;
+}
+
+.mobile-dashboard-profile,
+.mobile-dashboard-backbar {
+  position: relative;
+  overflow: hidden;
+  padding: 1.2rem;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background:
+    radial-gradient(circle at top right, rgba(255, 214, 170, 0.34), transparent 38%),
+    linear-gradient(140deg, rgba(255, 255, 255, 0.78), rgba(248, 239, 229, 0.66));
+  box-shadow:
+    0 18px 46px rgba(71, 38, 14, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(18px);
+}
+
+.mobile-dashboard-profile::before,
+.mobile-dashboard-backbar::before {
+  content: "";
+  position: absolute;
+  inset: -20% auto auto 55%;
+  width: 160px;
+  height: 160px;
+  border-radius: 999px;
+  background: rgba(184, 92, 56, 0.14);
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.mobile-dashboard-profile-top,
+.mobile-dashboard-profile-meta {
+  position: relative;
+  z-index: 1;
+}
+
+.mobile-dashboard-profile-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mobile-dashboard-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.2rem;
+  height: 4.2rem;
+  flex: 0 0 4.2rem;
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(184, 92, 56, 0.88), rgba(101, 55, 26, 0.88));
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  box-shadow: 0 14px 28px rgba(101, 55, 26, 0.26);
+}
+
+.mobile-dashboard-profile-copy {
+  min-width: 0;
+}
+
+.mobile-dashboard-profile-copy h1,
+.mobile-dashboard-menu-heading h2,
+.mobile-dashboard-back-copy h1 {
+  margin: 0;
+}
+
+.mobile-dashboard-profile-copy p:last-child,
+.mobile-dashboard-profile-note,
+.mobile-dashboard-back-copy p:last-child {
+  margin: 0.35rem 0 0;
+  color: var(--muted-strong);
+  line-height: 1.55;
+}
+
+.mobile-dashboard-profile-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.mobile-dashboard-role-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(89, 52, 24, 0.08);
+  color: var(--accent-dark);
+  font-weight: 600;
+}
+
+.mobile-dashboard-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+}
+
+.mobile-dashboard-profile-note {
+  position: relative;
+  z-index: 1;
+}
+
+.mobile-dashboard-menu-heading p,
+.mobile-dashboard-back-copy p:first-child {
+  margin-bottom: 0.45rem;
+}
+
+.mobile-dashboard-menu-card,
+.mobile-dashboard-back-button {
+  border: 0;
+  cursor: pointer;
+}
+
+.mobile-dashboard-menu-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.95rem;
+  width: 100%;
+  padding: 1rem;
+  text-align: left;
+  border-radius: 24px;
+  border: 1px solid rgba(89, 52, 24, 0.08);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(247, 240, 232, 0.84));
+  box-shadow: 0 14px 34px rgba(71, 38, 14, 0.1);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.mobile-dashboard-menu-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(184, 92, 56, 0.24);
+  box-shadow: 0 18px 38px rgba(71, 38, 14, 0.13);
+}
+
+.mobile-dashboard-menu-card:focus-visible,
+.mobile-dashboard-back-button:focus-visible {
+  outline: 2px solid rgba(184, 92, 56, 0.34);
+  outline-offset: 3px;
+}
+
+.mobile-dashboard-menu-icon,
+.mobile-dashboard-menu-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-dashboard-menu-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 18px;
+  background: rgba(184, 92, 56, 0.12);
+  color: var(--accent-dark);
+  font-size: 1.1rem;
+}
+
+.mobile-dashboard-menu-copy {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.mobile-dashboard-menu-copy strong {
+  font-size: 1rem;
+}
+
+.mobile-dashboard-menu-copy small,
+.mobile-dashboard-menu-arrow,
+.mobile-dashboard-back-copy p:last-child {
+  color: var(--muted-strong);
+}
+
+.mobile-dashboard-backbar {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.mobile-dashboard-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  justify-self: start;
+  padding: 0.75rem 0.95rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text);
+  box-shadow: 0 10px 24px rgba(71, 38, 14, 0.08);
+}
+
+.mobile-dashboard-back-copy {
+  position: relative;
+  z-index: 1;
+}
+
+.mobile-dashboard-back-copy h1 {
+  font-size: clamp(1.55rem, 5vw, 2rem);
+}
+
+.pagination-shell {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+  padding: 0.95rem 1rem;
+  border-radius: 22px;
+  border: 1px solid rgba(89, 52, 24, 0.08);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(247, 240, 232, 0.84));
+  box-shadow: 0 14px 34px rgba(71, 38, 14, 0.1);
+}
+
+.pagination-summary,
+.pagination-controls,
+.pagination-page-list,
+.pagination-nav-button,
+.pagination-page-button {
+  display: flex;
+  align-items: center;
+}
+
+.pagination-summary {
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pagination-summary strong {
+  color: var(--accent-dark);
+}
+
+.pagination-summary span {
+  color: var(--muted-strong);
+  font-size: 0.95rem;
+}
+
+.pagination-controls {
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pagination-page-list {
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.pagination-nav-button,
+.pagination-page-button {
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  border-radius: 16px;
+  border: 1px solid rgba(89, 52, 24, 0.08);
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.pagination-nav-button {
+  padding: 0.75rem 0.95rem;
+}
+
+.pagination-page-button {
+  min-width: 2.75rem;
+  padding: 0.75rem;
+}
+
+.pagination-nav-button:hover,
+.pagination-page-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(184, 92, 56, 0.24);
+  box-shadow: 0 10px 22px rgba(71, 38, 14, 0.08);
+}
+
+.pagination-nav-button:disabled,
+.pagination-page-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.pagination-page-button.active {
+  background: linear-gradient(135deg, rgba(184, 92, 56, 0.95), rgba(101, 55, 26, 0.95));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 12px 24px rgba(101, 55, 26, 0.18);
+}
+
+.pagination-nav-button:focus-visible,
+.pagination-page-button:focus-visible {
+  outline: 2px solid rgba(184, 92, 56, 0.34);
+  outline-offset: 3px;
+}
+
 .dashboard-header-actions {
   align-items: center;
   flex: 0 1 auto;
@@ -1045,6 +1367,32 @@ textarea {
 }
 
 @media (max-width: 768px) {
+  .mobile-dashboard-shell .dashboard-section,
+  .mobile-dashboard-shell .hero {
+    width: 100%;
+  }
+
+  .mobile-dashboard-shell .hero {
+    margin: 0;
+    min-height: 0;
+    border-radius: 28px;
+  }
+
+  .mobile-dashboard-shell .admin-content-section {
+    margin-top: 0;
+  }
+
+  .pagination-shell.sticky-mobile {
+    position: sticky;
+    bottom: 0.75rem;
+    z-index: 12;
+    backdrop-filter: blur(16px);
+  }
+
+  .pagination-controls {
+    justify-content: center;
+  }
+
   .hero-search {
     grid-template-columns: 1fr;
   }
@@ -1203,6 +1551,56 @@ textarea {
 }
 
 @media (max-width: 480px) {
+  .mobile-dashboard-profile,
+  .mobile-dashboard-backbar {
+    padding: 1rem;
+    border-radius: 24px;
+  }
+
+  .mobile-dashboard-profile-top {
+    align-items: flex-start;
+  }
+
+  .mobile-dashboard-avatar {
+    width: 3.6rem;
+    height: 3.6rem;
+    flex-basis: 3.6rem;
+    border-radius: 20px;
+  }
+
+  .mobile-dashboard-menu-card {
+    padding: 0.95rem;
+    border-radius: 22px;
+  }
+
+  .pagination-shell {
+    padding: 0.9rem;
+    border-radius: 20px;
+  }
+
+  .pagination-summary,
+  .pagination-controls {
+    align-items: stretch;
+  }
+
+  .pagination-nav-button,
+  .pagination-page-list {
+    width: 100%;
+  }
+
+  .pagination-page-list {
+    justify-content: center;
+  }
+
+  .pagination-nav-button {
+    justify-content: center;
+  }
+
+  .mobile-dashboard-menu-icon {
+    width: 2.8rem;
+    height: 2.8rem;
+  }
+
   .hero-content h1,
   .section-card h1,
   .section-card h2,
@@ -1566,7 +1964,9 @@ html {
 .homepage-cta-secondary {
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.08);
-  color: #fff8ef;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: chocolate;
 }
 
 .homepage-nav .btn.secondary:hover,
@@ -2687,3 +3087,393 @@ html {
     justify-content: center;
   }
 }
+
+/* PWA Install Prompt */
+.pwa-install-prompt {
+  position: fixed;
+  bottom: 2rem;
+  left: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.pwa-install-prompt-card {
+  background: rgba(255, 252, 246, 0.98);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(184, 92, 56, 0.15);
+  border-radius: 24px;
+  padding: 1.5rem;
+  box-shadow: 0 24px 48px rgba(73, 42, 16, 0.18);
+  position: relative;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.pwa-install-prompt-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 1.5rem;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.pwa-install-prompt-close:hover {
+  color: var(--accent);
+}
+
+.pwa-install-prompt-content {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: flex-start;
+}
+
+.pwa-install-prompt-icon {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pwa-install-prompt-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pwa-install-prompt-copy h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.pwa-install-prompt-copy p {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.pwa-install-prompt-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.pwa-install-prompt-cancel,
+.pwa-install-prompt-install {
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pwa-install-prompt-cancel {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.pwa-install-prompt-cancel:hover:not(:disabled) {
+  background: var(--accent-soft);
+  opacity: 0.8;
+}
+
+.pwa-install-prompt-install {
+  background: var(--accent);
+  color: white;
+}
+
+.pwa-install-prompt-install:hover:not(:disabled) {
+  background: var(--accent-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(184, 92, 56, 0.2);
+}
+
+.pwa-install-prompt-install:disabled,
+.pwa-install-prompt-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Offline state */
+.homepage-video-empty,
+.homepage-text-empty {
+  padding: 3rem 2rem;
+  text-align: center;
+  background: rgba(255, 252, 246, 0.5);
+  border-radius: 20px;
+  border: 1px solid rgba(89, 52, 24, 0.1);
+}
+
+.homepage-video-empty p,
+.homepage-text-empty p {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.homepage-video-broken,
+.homepage-video-frame-broken {
+  background: rgba(184, 92, 56, 0.05);
+}
+
+.homepage-video-broken-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+/* PWA app mode adjustments */
+@supports (padding: max(0px)) {
+  html {
+    /* Support safe areas for notches */
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+    padding-top: max(0px, env(safe-area-inset-top));
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+
+  body {
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+/* Prevent zoom on input focus for iOS */
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Smooth page transitions for PWA */
+@media (prefers-reduced-motion: no-preference) {
+  body {
+    animation: pageIn 0.3s ease-out;
+  }
+
+  @keyframes pageIn {
+    from {
+      opacity: 0.95;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* Mobile navigation optimizations */
+@media (max-width: 768px) {
+  .pwa-install-prompt {
+    bottom: 1.5rem;
+    left: 0.75rem;
+    right: 0.75rem;
+  }
+
+  .pwa-install-prompt-card {
+    padding: 1.25rem;
+  }
+
+  .pwa-install-prompt-content {
+    margin-bottom: 1.25rem;
+  }
+
+  .pwa-install-prompt-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .pwa-install-prompt-cancel,
+  .pwa-install-prompt-install {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Touch feedback for interactive elements */
+@media (hover: none) and (pointer: coarse) {
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"] {
+    -webkit-tap-highlight-color: rgba(184, 92, 56, 0.1);
+  }
+}
+
+/* PWA Settings Section */
+.pwa-settings-section {
+  display: grid;
+  gap: 2rem;
+}
+
+.pwa-settings-group {
+  background: rgba(255, 252, 246, 0.6);
+  border: 1px solid rgba(89, 52, 24, 0.1);
+  border-radius: 20px;
+  padding: 1.5rem;
+}
+
+.pwa-settings-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  color: var(--accent);
+}
+
+.pwa-settings-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pwa-settings-header svg {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.pwa-settings-content {
+  display: grid;
+  gap: 1rem;
+}
+
+.pwa-settings-status {
+  font-size: 0.95rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+}
+
+.pwa-settings-status.enabled {
+  background: rgba(47, 122, 83, 0.1);
+  color: #2f7a53;
+}
+
+.pwa-settings-status.disabled {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.pwa-settings-disabled {
+  display: grid;
+  gap: 1rem;
+}
+
+.pwa-settings-description,
+.pwa-settings-hint {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.pwa-settings-hint {
+  font-size: 0.9rem;
+  color: #8a6f5f;
+  font-style: italic;
+}
+
+.pwa-settings-unsupported {
+  margin: 0;
+  padding: 1rem;
+  background: rgba(183, 66, 50, 0.1);
+  color: #b74232;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.pwa-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+.update-badge {
+  display: inline-block;
+  background: var(--danger);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .pwa-settings-group {
+    padding: 1.25rem;
+  }
+
+  .pwa-settings-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pwa-settings-actions .btn {
+    width: 100%;
+  }
+}
+
+

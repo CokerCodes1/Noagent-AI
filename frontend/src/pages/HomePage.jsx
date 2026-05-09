@@ -1,8 +1,8 @@
-import { Suspense, lazy, useEffect, useState } from "react";
-import api from "../api/axios.js";
+import { Suspense, lazy, useMemo } from "react";
 import HeroSection from "../components/homepage/HeroSection.jsx";
 import LoanSupportSection from "../components/homepage/LoanSupportSection.jsx";
 import TextTestimonialsSwiper from "../components/homepage/TextTestimonialsSwiper.jsx";
+import { useTestimonials } from "../contexts/TestimonialsContext.jsx";
 
 const VideoTestimonials = lazy(
   () => import("../components/homepage/VideoTestimonials.jsx"),
@@ -26,49 +26,21 @@ function SectionFallback() {
 }
 
 export default function HomePage() {
-  const [testimonials, setTestimonials] = useState([]);
-  const [testimonialsLoaded, setTestimonialsLoaded] = useState(false);
+  const {
+    testimonials,
+    loading: testimonialsLoading,
+    error: testimonialsError,
+  } = useTestimonials();
 
-  useEffect(() => {
-    let isMounted = true;
+  const videoTestimonials = useMemo(
+    () => testimonials.filter((testimonial) => testimonial.videoUrl).slice(0, 6),
+    [testimonials],
+  );
 
-    async function fetchTestimonials() {
-      try {
-        const response = await api.get("/testimonials?limit=18");
-
-        if (!isMounted) {
-          return;
-        }
-
-        setTestimonials(
-          Array.isArray(response.data.testimonials)
-            ? response.data.testimonials
-            : [],
-        );
-      } catch {
-        if (isMounted) {
-          setTestimonials([]);
-        }
-      } finally {
-        if (isMounted) {
-          setTestimonialsLoaded(true);
-        }
-      }
-    }
-
-    fetchTestimonials();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const videoTestimonials = testimonials
-    .filter((testimonial) => testimonial.videoUrl)
-    .slice(0, 6);
-  const textTestimonials = testimonials
-    .filter((testimonial) => testimonial.textContent)
-    .slice(0, 8);
+  const textTestimonials = useMemo(
+    () => testimonials.filter((testimonial) => testimonial.textContent).slice(0, 8),
+    [testimonials],
+  );
 
   return (
     <div className="homepage-shell">
@@ -77,11 +49,13 @@ export default function HomePage() {
       <Suspense fallback={<SectionFallback />}>
         <VideoTestimonials
           testimonials={videoTestimonials}
-          loading={!testimonialsLoaded}
+          loading={testimonialsLoading}
+          error={testimonialsError}
         />
         <TextTestimonialsSwiper
           testimonials={textTestimonials}
-          loading={!testimonialsLoaded}
+          loading={testimonialsLoading}
+          error={testimonialsError}
         />
         <RentersSection />
         <LandlordsSection />

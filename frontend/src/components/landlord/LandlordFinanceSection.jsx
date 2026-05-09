@@ -1,4 +1,7 @@
+import usePagination from "../../hooks/usePagination.js";
 import { formatNaira } from "../../utils/propertyListing.js";
+import PaginatedContent from "../shared/PaginatedContent.jsx";
+import PaginationControls from "../shared/PaginationControls.jsx";
 
 export default function LandlordFinanceSection({
   summary,
@@ -12,6 +15,8 @@ export default function LandlordFinanceSection({
   onReset,
   submitting
 }) {
+  const recordsPagination = usePagination(records);
+
   return (
     <div className="grid admin-management-grid">
       <div className="section-card">
@@ -100,8 +105,12 @@ export default function LandlordFinanceSection({
         {records.length === 0 ? (
           <div className="status-card">No finance records added yet.</div>
         ) : (
-          <div className="dashboard-list">
-            {records.map((record) => (
+          <>
+            <PaginatedContent
+              className="dashboard-list"
+              pageKey={`finance-records-${recordsPagination.currentPage}`}
+            >
+              {recordsPagination.pageItems.map((record) => (
               <article key={record.id} className="listing-row compact admin-user-row">
                 <div className="listing-copy">
                   <div className="admin-user-heading">
@@ -123,8 +132,22 @@ export default function LandlordFinanceSection({
                   </button>
                 </div>
               </article>
-            ))}
-          </div>
+              ))}
+            </PaginatedContent>
+
+            <PaginationControls
+              currentPage={recordsPagination.currentPage}
+              endIndex={recordsPagination.endIndex}
+              goToNextPage={recordsPagination.goToNextPage}
+              goToPage={recordsPagination.goToPage}
+              goToPreviousPage={recordsPagination.goToPreviousPage}
+              label="records"
+              pageNumbers={recordsPagination.pageNumbers}
+              startIndex={recordsPagination.startIndex}
+              totalItems={recordsPagination.totalItems}
+              totalPages={recordsPagination.totalPages}
+            />
+          </>
         )}
       </div>
     </div>

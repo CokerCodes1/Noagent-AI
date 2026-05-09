@@ -1,13 +1,25 @@
+const SESSION_EVENT = "noagentnaija:session-change";
+
+function notifySessionChange() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent(SESSION_EVENT));
+}
+
 export function setAuthSession({ token, user }) {
   localStorage.setItem("token", token);
   localStorage.setItem("role", user.role);
   localStorage.setItem("user", JSON.stringify(user));
+  notifySessionChange();
 }
 
 export function clearAuthSession() {
   localStorage.removeItem("token");
   localStorage.removeItem("role");
   localStorage.removeItem("user");
+  notifySessionChange();
 }
 
 export function getStoredUser() {
@@ -42,7 +54,28 @@ export function updateStoredUser(updates) {
   };
 
   localStorage.setItem("user", JSON.stringify(nextUser));
+  notifySessionChange();
   return nextUser;
+}
+
+export function subscribeToSessionChanges(callback) {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  function handleStorage(event) {
+    if (!event.key || event.key === "user" || event.key === "role" || event.key === "token") {
+      callback();
+    }
+  }
+
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener(SESSION_EVENT, callback);
+
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(SESSION_EVENT, callback);
+  };
 }
 
 export function getDashboardPath(role) {

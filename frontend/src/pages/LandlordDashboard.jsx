@@ -3,6 +3,8 @@ import { Navigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import api, { extractErrorMessage } from "../api/axios.js";
 import DashboardHeader from "../components/DashboardHeader.jsx";
+import MobileDashboardLayout from "../components/dashboard/MobileDashboardLayout.jsx";
+import PwaSettings from "../components/settings/PwaSettings.jsx";
 import LandlordFinanceSection from "../components/landlord/LandlordFinanceSection.jsx";
 import LandlordManagementSection from "../components/landlord/LandlordManagementSection.jsx";
 import LandlordOverviewSection from "../components/landlord/LandlordOverviewSection.jsx";
@@ -15,6 +17,7 @@ import {
 } from "../components/landlord/landlordConfig.js";
 import TechnicianMarketplaceSection from "../components/technicians/TechnicianMarketplaceSection.jsx";
 import WorkspaceSidebar from "../components/workspace/WorkspaceSidebar.jsx";
+import useIsPhoneViewport from "../hooks/useIsPhoneViewport.js";
 import { clearAuthSession, getStoredUser } from "../utils/session.js";
 
 const emptyOverview = {
@@ -54,6 +57,7 @@ function handleRequestError(requestError, setError) {
 export default function LandlordDashboard() {
   const location = useLocation();
   const user = getStoredUser();
+  const isPhoneViewport = useIsPhoneViewport();
   const activeSection = getCurrentLandlordSection(location.pathname);
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [propertiesLoading, setPropertiesLoading] = useState(true);
@@ -366,6 +370,164 @@ export default function LandlordDashboard() {
       </div>
     </>
   );
+  const mobileItems = landlordNavOrder.map((sectionKey) => ({
+    key: sectionKey,
+    title: landlordSections[sectionKey].label,
+    description: landlordSections[sectionKey].description,
+    path: landlordSections[sectionKey].path,
+    icon: landlordSections[sectionKey].icon
+  }));
+  const sectionContent = (
+    <section className="dashboard-section admin-content-section">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Landlord Dashboard</p>
+          <h1>{section.label}</h1>
+        </div>
+        <p>{section.description}</p>
+      </div>
+
+      {activeSection === "dashboard" ? (
+        <>
+          <LandlordOverviewSection
+            loading={overviewLoading}
+            error={overviewError}
+            stats={overview}
+          />
+          <PwaSettings role={user?.role || "landlord"} />
+        </>
+      ) : null}
+
+      {activeSection === "rentals" ? (
+        <>
+          {propertiesError ? <div className="status-card error">{propertiesError}</div> : null}
+          {propertiesLoading ? (
+            <div className="status-card">Loading rental listings...</div>
+          ) : (
+            <LandlordPropertySection
+              title="Keep your rental listings moving"
+              eyebrow="Rental Listings"
+              description="Post properties for rent exactly the way the original flow worked, then mark them rented when they are no longer available."
+              submitLabel="Post Rental Listing"
+              submitting={submittingProperty}
+              onSubmit={handlePropertySubmit}
+              properties={rentalProperties}
+              listingPurpose="rent"
+              onStatusChange={handlePropertyStatusChange}
+            />
+          )}
+        </>
+      ) : null}
+
+      {activeSection === "tenants" ? (
+        <>
+          {tenantsError ? <div className="status-card error">{tenantsError}</div> : null}
+          {tenantsLoading ? (
+            <div className="status-card">Loading tenants...</div>
+          ) : (
+            <LandlordTenantsSection
+              form={tenantForm}
+              tenants={tenants}
+              editingTenantId={editingTenantId}
+              onChange={updateTenantField}
+              onDelete={handleDeleteTenant}
+              onEdit={handleEditTenant}
+              onSubmit={handleTenantSubmit}
+              onReset={resetTenantForm}
+              submitting={submittingTenant}
+              messageTemplate={messageTemplate}
+              setMessageTemplate={setMessageTemplate}
+            />
+          )}
+        </>
+      ) : null}
+
+      {activeSection === "management" ? (
+        <>
+          {tenantsError ? <div className="status-card error">{tenantsError}</div> : null}
+          {tenantsLoading ? (
+            <div className="status-card">Loading management data...</div>
+          ) : (
+            <LandlordManagementSection
+              tenants={tenants}
+              reminderMessage={reminderMessage}
+              setReminderMessage={setReminderMessage}
+            />
+          )}
+        </>
+      ) : null}
+
+      {activeSection === "seller" ? (
+        <>
+          {propertiesError ? <div className="status-card error">{propertiesError}</div> : null}
+          {propertiesLoading ? (
+            <div className="status-card">Loading sale listings...</div>
+          ) : (
+            <LandlordPropertySection
+              title="Manage properties for sale"
+              eyebrow="Seller Page"
+              description="Post properties for sale, keep their details current, and mark them sold so they disappear from renter listings automatically."
+              submitLabel="Post Property for Sale"
+              submitting={submittingProperty}
+              onSubmit={handlePropertySubmit}
+              properties={saleProperties}
+              listingPurpose="sale"
+              onStatusChange={handlePropertyStatusChange}
+            />
+          )}
+        </>
+      ) : null}
+
+      {activeSection === "finance" ? (
+        <>
+          {financeError ? <div className="status-card error">{financeError}</div> : null}
+          {financeLoading ? (
+            <div className="status-card">Loading finance records...</div>
+          ) : (
+            <LandlordFinanceSection
+              summary={finance.summary}
+              records={finance.records}
+              form={financeForm}
+              editingRecordId={editingFinanceId}
+              onChange={updateFinanceField}
+              onDelete={handleDeleteFinanceRecord}
+              onEdit={handleEditFinanceRecord}
+              onSubmit={handleFinanceSubmit}
+              onReset={resetFinanceForm}
+              submitting={submittingFinance}
+            />
+          )}
+        </>
+      ) : null}
+
+      {activeSection === "technicians" ? (
+        <TechnicianMarketplaceSection
+          title="Technician Marketplace"
+          subtitle="Reach plumbers, electricians, dispatch riders, food vendors, and other service providers directly from your landlord workspace."
+        />
+      ) : null}
+    </section>
+  );
+
+  if (isPhoneViewport) {
+    return (
+      <div className="dashboard-shell">
+        <MobileDashboardLayout
+          activeSectionKey={activeSection}
+          basePath="/landlord"
+          defaultSectionKey="dashboard"
+          items={mobileItems}
+          sectionDescription={section.description}
+          sectionTitle={section.label}
+          user={user}
+          workspaceDescription="Manage rentals, sales, tenants, income, and technician discovery from one organized dashboard."
+          workspaceTitle="Landlord Workspace"
+        >
+          {sectionContent}
+        </MobileDashboardLayout>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-shell">
@@ -384,132 +546,7 @@ export default function LandlordDashboard() {
             subtitle={section.description}
           />
 
-          <section className="dashboard-section admin-content-section">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Landlord Dashboard</p>
-                <h1>{section.label}</h1>
-              </div>
-              <p>{section.description}</p>
-            </div>
-
-            {activeSection === "dashboard" ? (
-              <LandlordOverviewSection
-                loading={overviewLoading}
-                error={overviewError}
-                stats={overview}
-              />
-            ) : null}
-
-            {activeSection === "rentals" ? (
-              <>
-                {propertiesError ? <div className="status-card error">{propertiesError}</div> : null}
-                {propertiesLoading ? (
-                  <div className="status-card">Loading rental listings...</div>
-                ) : (
-                  <LandlordPropertySection
-                    title="Keep your rental listings moving"
-                    eyebrow="Rental Listings"
-                    description="Post properties for rent exactly the way the original flow worked, then mark them rented when they are no longer available."
-                    submitLabel="Post Rental Listing"
-                    submitting={submittingProperty}
-                    onSubmit={handlePropertySubmit}
-                    properties={rentalProperties}
-                    listingPurpose="rent"
-                    onStatusChange={handlePropertyStatusChange}
-                  />
-                )}
-              </>
-            ) : null}
-
-            {activeSection === "tenants" ? (
-              <>
-                {tenantsError ? <div className="status-card error">{tenantsError}</div> : null}
-                {tenantsLoading ? (
-                  <div className="status-card">Loading tenants...</div>
-                ) : (
-                  <LandlordTenantsSection
-                    form={tenantForm}
-                    tenants={tenants}
-                    editingTenantId={editingTenantId}
-                    onChange={updateTenantField}
-                    onDelete={handleDeleteTenant}
-                    onEdit={handleEditTenant}
-                    onSubmit={handleTenantSubmit}
-                    onReset={resetTenantForm}
-                    submitting={submittingTenant}
-                    messageTemplate={messageTemplate}
-                    setMessageTemplate={setMessageTemplate}
-                  />
-                )}
-              </>
-            ) : null}
-
-            {activeSection === "management" ? (
-              <>
-                {tenantsError ? <div className="status-card error">{tenantsError}</div> : null}
-                {tenantsLoading ? (
-                  <div className="status-card">Loading management data...</div>
-                ) : (
-                  <LandlordManagementSection
-                    tenants={tenants}
-                    reminderMessage={reminderMessage}
-                    setReminderMessage={setReminderMessage}
-                  />
-                )}
-              </>
-            ) : null}
-
-            {activeSection === "seller" ? (
-              <>
-                {propertiesError ? <div className="status-card error">{propertiesError}</div> : null}
-                {propertiesLoading ? (
-                  <div className="status-card">Loading sale listings...</div>
-                ) : (
-                  <LandlordPropertySection
-                    title="Manage properties for sale"
-                    eyebrow="Seller Page"
-                    description="Post properties for sale, keep their details current, and mark them sold so they disappear from renter listings automatically."
-                    submitLabel="Post Property for Sale"
-                    submitting={submittingProperty}
-                    onSubmit={handlePropertySubmit}
-                    properties={saleProperties}
-                    listingPurpose="sale"
-                    onStatusChange={handlePropertyStatusChange}
-                  />
-                )}
-              </>
-            ) : null}
-
-            {activeSection === "finance" ? (
-              <>
-                {financeError ? <div className="status-card error">{financeError}</div> : null}
-                {financeLoading ? (
-                  <div className="status-card">Loading finance records...</div>
-                ) : (
-                  <LandlordFinanceSection
-                    summary={finance.summary}
-                    records={finance.records}
-                    form={financeForm}
-                    editingRecordId={editingFinanceId}
-                    onChange={updateFinanceField}
-                    onDelete={handleDeleteFinanceRecord}
-                    onEdit={handleEditFinanceRecord}
-                    onSubmit={handleFinanceSubmit}
-                    onReset={resetFinanceForm}
-                    submitting={submittingFinance}
-                  />
-                )}
-              </>
-            ) : null}
-
-            {activeSection === "technicians" ? (
-              <TechnicianMarketplaceSection
-                title="Technician Marketplace"
-                subtitle="Reach plumbers, electricians, dispatch riders, food vendors, and other service providers directly from your landlord workspace."
-              />
-            ) : null}
-          </section>
+          {sectionContent}
         </main>
       </div>
     </div>

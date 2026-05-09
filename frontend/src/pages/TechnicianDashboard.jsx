@@ -5,6 +5,8 @@ import { toast } from "react-toastify";
 import api, { BACKEND_URL, extractErrorMessage } from "../api/axios.js";
 import AdminStatCard from "../components/admin/AdminStatCard.jsx";
 import DashboardHeader from "../components/DashboardHeader.jsx";
+import MobileDashboardLayout from "../components/dashboard/MobileDashboardLayout.jsx";
+import PwaSettings from "../components/settings/PwaSettings.jsx";
 import TechnicianProfileFields from "../components/technicians/TechnicianProfileFields.jsx";
 import {
   emptyTechnicianProfileForm,
@@ -13,6 +15,7 @@ import {
   technicianSections
 } from "../components/technicians/technicianConfig.js";
 import WorkspaceSidebar from "../components/workspace/WorkspaceSidebar.jsx";
+import useIsPhoneViewport from "../hooks/useIsPhoneViewport.js";
 import {
   clearAuthSession,
   getStoredUser,
@@ -80,6 +83,7 @@ function resolveMediaUrl(value = "") {
 export default function TechnicianDashboard() {
   const location = useLocation();
   const user = getStoredUser();
+  const isPhoneViewport = useIsPhoneViewport();
   const activeSection = getCurrentTechnicianSection(location.pathname);
   const imagesInputRef = useRef(null);
   const videoInputRef = useRef(null);
@@ -232,6 +236,186 @@ export default function TechnicianDashboard() {
   const section = technicianSections[activeSection];
   const profileImages = Array.isArray(profile?.images) ? profile.images : [];
   const profileVideoUrl = resolveMediaUrl(profile?.video_url);
+  const mobileItems = technicianNavOrder.map((sectionKey) => ({
+    key: sectionKey,
+    title: technicianSections[sectionKey].label,
+    description: technicianSections[sectionKey].description,
+    path: technicianSections[sectionKey].path,
+    icon: technicianSections[sectionKey].icon
+  }));
+  const sectionContent = (
+    <section className="dashboard-section admin-content-section">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Technician Dashboard</p>
+          <h1>{section.label}</h1>
+        </div>
+        <p>{section.description}</p>
+      </div>
+
+      {dashboardError ? <div className="status-card error">{dashboardError}</div> : null}
+
+      {activeSection === "dashboard" ? (
+        dashboardLoading ? (
+          <div className="status-card">Loading technician dashboard...</div>
+        ) : (
+          <>
+            <div className="grid stats-grid admin-stats-grid">
+              <AdminStatCard
+                icon={FiPhoneCall}
+                label="Total Contacts"
+                value={stats.totalContacts}
+                note="Marketplace contact actions"
+              />
+              <AdminStatCard
+                icon={FiBriefcase}
+                label="Jobs Delivered"
+                value={stats.jobsDelivered}
+                note="Completed jobs tracked on profile"
+              />
+              <AdminStatCard
+                icon={FiDollarSign}
+                label="Total Earnings"
+                value={`N${Number(stats.totalEarnings || 0).toLocaleString()}`}
+                note="Self-reported earnings"
+              />
+            </div>
+            <PwaSettings role={user?.role || "technician"} />
+          </>
+        )
+      ) : null}
+
+      {activeSection === "profile" ? (
+        dashboardLoading ? (
+          <div className="status-card">Loading technician profile...</div>
+        ) : (
+          <div className="grid admin-management-grid technician-profile-grid">
+            <div className="section-card">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Profile</p>
+                  <h2>Update your marketplace details</h2>
+                </div>
+              </div>
+
+              <p className="section-copy">
+                Add the information landlords and renters need before reaching out,
+                including your service category, office address, images, and a skill
+                showcase video uploaded from your files.
+              </p>
+
+              <form className="property-form" onSubmit={handleProfileSubmit}>
+                <TechnicianProfileFields
+                  form={form}
+                  onChange={updateField}
+                  isEditing
+                  imagesInputRef={imagesInputRef}
+                  videoInputRef={videoInputRef}
+                />
+
+                <button className="btn primary" type="submit" disabled={savingProfile}>
+                  {savingProfile ? "Saving..." : "Save Profile"}
+                </button>
+              </form>
+            </div>
+
+            <div className="section-card">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Preview</p>
+                  <h2>Your public marketplace card</h2>
+                </div>
+              </div>
+
+              <div className="technician-preview">
+                {profile?.profile_image ? (
+                  <img
+                    className="technician-preview-image"
+                    src={resolveMediaUrl(profile.profile_image)}
+                    alt={profile.name}
+                  />
+                ) : (
+                  <div className="empty-media technician-preview-image">
+                    No cover image uploaded
+                  </div>
+                )}
+
+                <div className="dashboard-list">
+                  <article className="card technician-card preview-card">
+                    <div className="card-content">
+                      <div className="property-heading">
+                        <div>
+                          <h3>{profile?.name || "Your business name"}</h3>
+                          <p>{profile?.category || "Choose a category"}</p>
+                        </div>
+                      </div>
+
+                      <p className="property-description">
+                        {profile?.description || "Add a short description of your services."}
+                      </p>
+                      <p className="section-meta">
+                        {profile?.office_address || "Add your office address"}
+                      </p>
+                      <p className="section-meta">
+                        {profile?.phone || "Add a phone number"}
+                      </p>
+                    </div>
+                  </article>
+
+                  {profileImages.length > 0 ? (
+                    <div className="technician-gallery">
+                      {profileImages.map((image) => (
+                        <img
+                          key={image}
+                          src={resolveMediaUrl(image)}
+                          alt={`${profile?.name || "Technician"} portfolio`}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {profileVideoUrl ? (
+                    /^https?:\/\//i.test(profile?.video_url || "") ? (
+                      <a
+                        className="btn secondary"
+                        href={profileVideoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open current video
+                      </a>
+                    ) : (
+                      <video controls src={profileVideoUrl} className="technician-inline-video" />
+                    )
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      ) : null}
+    </section>
+  );
+
+  if (isPhoneViewport) {
+    return (
+      <div className="dashboard-shell">
+        <MobileDashboardLayout
+          activeSectionKey={activeSection}
+          basePath="/technician"
+          defaultSectionKey="dashboard"
+          items={mobileItems}
+          sectionDescription={section.description}
+          sectionTitle={section.label}
+          user={user}
+          workspaceDescription="Manage your public profile and track how clients engage with your services."
+          workspaceTitle="Technician Workspace"
+        >
+          {sectionContent}
+        </MobileDashboardLayout>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-shell">
@@ -250,154 +434,7 @@ export default function TechnicianDashboard() {
             subtitle={section.description}
           />
 
-          <section className="dashboard-section admin-content-section">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Technician Dashboard</p>
-                <h1>{section.label}</h1>
-              </div>
-              <p>{section.description}</p>
-            </div>
-
-            {dashboardError ? <div className="status-card error">{dashboardError}</div> : null}
-
-            {activeSection === "dashboard" ? (
-              dashboardLoading ? (
-                <div className="status-card">Loading technician dashboard...</div>
-              ) : (
-                <div className="grid stats-grid admin-stats-grid">
-                  <AdminStatCard
-                    icon={FiPhoneCall}
-                    label="Total Contacts"
-                    value={stats.totalContacts}
-                    note="Marketplace contact actions"
-                  />
-                  <AdminStatCard
-                    icon={FiBriefcase}
-                    label="Jobs Delivered"
-                    value={stats.jobsDelivered}
-                    note="Completed jobs tracked on profile"
-                  />
-                  <AdminStatCard
-                    icon={FiDollarSign}
-                    label="Total Earnings"
-                    value={`N${Number(stats.totalEarnings || 0).toLocaleString()}`}
-                    note="Self-reported earnings"
-                  />
-                </div>
-              )
-            ) : null}
-
-            {activeSection === "profile" ? (
-              dashboardLoading ? (
-                <div className="status-card">Loading technician profile...</div>
-              ) : (
-                <div className="grid admin-management-grid technician-profile-grid">
-                  <div className="section-card">
-                    <div className="section-heading">
-                      <div>
-                        <p className="eyebrow">Profile</p>
-                        <h2>Update your marketplace details</h2>
-                      </div>
-                    </div>
-
-                    <p className="section-copy">
-                      Add the information landlords and renters need before reaching
-                      out, including your service category, office address, images,
-                      and a skill showcase video uploaded from your files.
-                    </p>
-
-                    <form className="property-form" onSubmit={handleProfileSubmit}>
-                      <TechnicianProfileFields
-                        form={form}
-                        onChange={updateField}
-                        isEditing
-                        imagesInputRef={imagesInputRef}
-                        videoInputRef={videoInputRef}
-                      />
-
-                      <button className="btn primary" type="submit" disabled={savingProfile}>
-                        {savingProfile ? "Saving..." : "Save Profile"}
-                      </button>
-                    </form>
-                  </div>
-
-                  <div className="section-card">
-                    <div className="section-heading">
-                      <div>
-                        <p className="eyebrow">Preview</p>
-                        <h2>Your public marketplace card</h2>
-                      </div>
-                    </div>
-
-                    <div className="technician-preview">
-                      {profile?.profile_image ? (
-                        <img
-                          className="technician-preview-image"
-                          src={resolveMediaUrl(profile.profile_image)}
-                          alt={profile.name}
-                        />
-                      ) : (
-                        <div className="empty-media technician-preview-image">
-                          No cover image uploaded
-                        </div>
-                      )}
-
-                      <div className="dashboard-list">
-                        <article className="card technician-card preview-card">
-                          <div className="card-content">
-                            <div className="property-heading">
-                              <div>
-                                <h3>{profile?.name || "Your business name"}</h3>
-                                <p>{profile?.category || "Choose a category"}</p>
-                              </div>
-                            </div>
-
-                            <p className="property-description">
-                              {profile?.description || "Add a short description of your services."}
-                            </p>
-                            <p className="section-meta">
-                              {profile?.office_address || "Add your office address"}
-                            </p>
-                            <p className="section-meta">
-                              {profile?.phone || "Add a phone number"}
-                            </p>
-                          </div>
-                        </article>
-
-                        {profileImages.length > 0 ? (
-                          <div className="technician-gallery">
-                            {profileImages.map((image) => (
-                              <img
-                                key={image}
-                                src={resolveMediaUrl(image)}
-                                alt={`${profile?.name || "Technician"} portfolio`}
-                              />
-                            ))}
-                          </div>
-                        ) : null}
-
-                        {profileVideoUrl ? (
-                          /^https?:\/\//i.test(profile?.video_url || "") ? (
-                            <a
-                              className="btn secondary"
-                              href={profileVideoUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              Open current video
-                            </a>
-                          ) : (
-                            <video controls src={profileVideoUrl} className="technician-inline-video" />
-                          )
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            ) : null}
-          </section>
+          {sectionContent}
         </main>
       </div>
     </div>

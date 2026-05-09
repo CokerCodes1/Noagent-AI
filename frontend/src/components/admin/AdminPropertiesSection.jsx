@@ -1,4 +1,7 @@
 import { BACKEND_URL } from "../../api/axios.js";
+import usePagination from "../../hooks/usePagination.js";
+import PaginatedContent from "../shared/PaginatedContent.jsx";
+import PaginationControls from "../shared/PaginationControls.jsx";
 import { formatCurrency } from "./adminConfig.js";
 import { formatNaira } from "../../utils/propertyListing.js";
 
@@ -23,6 +26,9 @@ export default function AdminPropertiesSection({
   updatePropertyField
 }) {
   const canMarkSold = managedPropertyForm.listing_purpose === "sale";
+  const propertiesPagination = usePagination(filteredProperties, {
+    resetKey: propertyFilter
+  });
 
   return (
     <div className="grid admin-management-grid">
@@ -214,8 +220,12 @@ export default function AdminPropertiesSection({
         ) : filteredProperties.length === 0 ? (
           <div className="status-card">No properties found for this filter.</div>
         ) : (
-          <div className="dashboard-list">
-            {filteredProperties.map((property) => (
+          <>
+            <PaginatedContent
+              className="dashboard-list"
+              pageKey={`properties-${propertiesPagination.currentPage}`}
+            >
+              {propertiesPagination.pageItems.map((property) => (
               <article key={property.id} className="listing-row">
                 {property.images[0] ? (
                   <img
@@ -260,8 +270,22 @@ export default function AdminPropertiesSection({
                   </button>
                 </div>
               </article>
-            ))}
-          </div>
+              ))}
+            </PaginatedContent>
+
+            <PaginationControls
+              currentPage={propertiesPagination.currentPage}
+              endIndex={propertiesPagination.endIndex}
+              goToNextPage={propertiesPagination.goToNextPage}
+              goToPage={propertiesPagination.goToPage}
+              goToPreviousPage={propertiesPagination.goToPreviousPage}
+              label="properties"
+              pageNumbers={propertiesPagination.pageNumbers}
+              startIndex={propertiesPagination.startIndex}
+              totalItems={propertiesPagination.totalItems}
+              totalPages={propertiesPagination.totalPages}
+            />
+          </>
         )}
       </div>
     </div>

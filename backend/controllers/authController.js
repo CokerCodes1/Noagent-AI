@@ -26,6 +26,10 @@ function normalizePhone(phone = "") {
   return String(phone).trim();
 }
 
+function normalizeAddress(address = "") {
+  return String(address).trim();
+}
+
 function normalizeResetCode(resetCode = "") {
   return String(resetCode).trim().replace(/\s+/g, "");
 }
@@ -65,6 +69,22 @@ function resolveRole(email, requestedRole = "renter") {
   return requestedRole === "landlord" ? "landlord" : "renter";
 }
 
+function buildUploadPath(filename = "") {
+  return filename ? `/uploads/${filename}` : "";
+}
+
+function mapAuthUser(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone || "",
+    home_address: user.home_address || "",
+    avatar_url: user.avatar_url || "",
+    role: user.role
+  };
+}
+
 function createAuthResponse(user) {
   const token = signToken({
     id: user.id,
@@ -75,14 +95,22 @@ function createAuthResponse(user) {
 
   return {
     token,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone || "",
-      role: user.role
-    }
+    user: mapAuthUser(user)
   };
+}
+
+async function fetchUserById(pool, userId) {
+  const [users] = await pool.execute(
+    `
+      SELECT id, name, email, phone, home_address, avatar_url, password, role
+      FROM users
+      WHERE id = ?
+      LIMIT 1
+    `,
+    [userId]
+  );
+
+  return users[0] || null;
 }
 
 exports.signup = async (req, res, next) => {
@@ -133,8 +161,8 @@ exports.signup = async (req, res, next) => {
       await connection.beginTransaction();
 
       const [result] = await connection.execute(
-        "INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)",
-        [normalizedName, normalizedEmail, normalizedPhone, hashedPassword, resolvedRole]
+        "INSERT INTO users (name, email, phone, home_address, avatar_url, password, role) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [normalizedName, normalizedEmail, normalizedPhone, "", "", hashedPassword, resolvedRole]
       );
 
       const user = {
@@ -142,6 +170,8 @@ exports.signup = async (req, res, next) => {
         name: normalizedName,
         email: normalizedEmail,
         phone: normalizedPhone,
+        home_address: "",
+        avatar_url: "",
         role: resolvedRole
       };
 
@@ -174,7 +204,12 @@ exports.login = async (req, res, next) => {
     const normalizedEmail = normalizeEmail(email);
     const pool = getPool();
     const [users] = await pool.execute(
-      "SELECT id, name, email, phone, password, role FROM users WHERE email = ? LIMIT 1",
+      `
+        SELECT id, name, email, phone, home_address, avatar_url, password, role
+        FROM users
+        WHERE email = ?
+        LIMIT 1
+      `,
       [normalizedEmail]
     );
 
@@ -276,7 +311,12 @@ exports.resetPassword = async (req, res, next) => {
     const normalizedResetCode = normalizeResetCode(resetCode);
     const pool = getPool();
     const [users] = await pool.execute(
-      "SELECT id, name, email, phone, role FROM users WHERE email = ? LIMIT 1",
+      `
+        SELECT id, name, email, phone, home_address, avatar_url, role
+        FROM users
+        WHERE email = ?
+        LIMIT 1
+      `,
       [normalizedEmail]
     );
 
@@ -367,7 +407,12 @@ exports.googleLogin = async (req, res, next) => {
     const pool = getPool();
 
     const [users] = await pool.execute(
-      "SELECT id, name, email, phone, password, role FROM users WHERE email = ? LIMIT 1",
+      `
+        SELECT id, name, email, phone, home_address, avatar_url, password, role
+        FROM users
+        WHERE email = ?
+        LIMIT 1
+      `,
       [email]
     );
 
@@ -382,8 +427,8 @@ exports.googleLogin = async (req, res, next) => {
 
       const randomPasswordHash = await bcrypt.hash(`${Date.now()}-${email}`, 10);
       const [result] = await pool.execute(
-        "INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)",
-        [name, email, "", randomPasswordHash, resolvedRole]
+        "INSERT INTO users (name, email, phone, home_address, avatar_url, password, role) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [name, email, "", "", "", randomPasswordHash, resolvedRole]
       );
 
       user = {
@@ -391,6 +436,8 @@ exports.googleLogin = async (req, res, next) => {
         name,
         email,
         phone: "",
+        home_address: "",
+        avatar_url: "",
         role: resolvedRole
       };
     } else if (user.role !== resolvedRole) {
@@ -399,6 +446,146 @@ exports.googleLogin = async (req, res, next) => {
     }
 
     return res.json(createAuthResponse(user));
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getCurrentUser = async (req, res, next) => {
+  try {
+    const pool = getPool();
+    const user = await fetchUserById(pool, req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    return res.json({ user: mapAuthUser(user) });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.updateCurrentUser = async (req, res, next) => {
+  try {
+    const pool = getPool();
+    const user = await fetchUserById(pool, req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const normalizedName = normalizeName(req.body.name);
+    const normalizedEmail = normalizeEmail(req.body.email);
+    const normalizedPhone = normalizePhone(req.body.phone);
+    const normalizedAddress = normalizeAddress(req.body.home_address);
+
+    if (!normalizedName || !normalizedEmail) {
+      return res.status(400).json({ message: "Name and email are required." });
+    }
+
+    if (normalizedEmail === ADMIN_EMAIL && normalizeEmail(user.email) !== ADMIN_EMAIL) {
+      return res.status(403).json({
+        message: "This reserved admin email cannot be assigned to another account."
+      });
+    }
+
+    const [emailConflict] = await pool.execute(
+      "SELECT id FROM users WHERE email = ? AND id <> ? LIMIT 1",
+      [normalizedEmail, req.user.id]
+    );
+
+    if (emailConflict.length > 0) {
+      return res.status(409).json({ message: "Another account already uses this email." });
+    }
+
+    const avatarUrl = req.file
+      ? buildUploadPath(req.file.filename)
+      : String(req.body.avatar_url || user.avatar_url || "").trim();
+    const nextRole = resolveRole(normalizedEmail, user.role);
+
+    await pool.execute(
+      `
+        UPDATE users
+        SET
+          name = ?,
+          email = ?,
+          phone = ?,
+          home_address = ?,
+          avatar_url = ?,
+          role = ?
+        WHERE id = ?
+      `,
+      [
+        normalizedName,
+        normalizedEmail,
+        normalizedPhone,
+        normalizedAddress,
+        avatarUrl,
+        nextRole,
+        req.user.id
+      ]
+    );
+
+    const updatedUser = await fetchUserById(pool, req.user.id);
+
+    return res.json({
+      message: "Settings updated successfully.",
+      ...createAuthResponse(updatedUser)
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        message: "Current password and new password are required."
+      });
+    }
+
+    if (!isPasswordValid(newPassword)) {
+      return res.status(400).json({
+        message: "New password must be at least 6 characters long."
+      });
+    }
+
+    const pool = getPool();
+    const user = await fetchUserById(pool, req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const passwordMatches = await bcrypt.compare(currentPassword, user.password);
+
+    if (!passwordMatches) {
+      return res.status(401).json({ message: "Current password is incorrect." });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        message: "Choose a different password from your current one."
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await pool.execute("UPDATE users SET password = ? WHERE id = ?", [
+      hashedPassword,
+      req.user.id
+    ]);
+
+    const updatedUser = await fetchUserById(pool, req.user.id);
+
+    return res.json({
+      message: "Password updated successfully.",
+      ...createAuthResponse(updatedUser)
+    });
   } catch (error) {
     return next(error);
   }

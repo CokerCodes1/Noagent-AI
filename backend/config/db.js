@@ -50,6 +50,8 @@ async function initDatabase() {
       name VARCHAR(120) NOT NULL,
       email VARCHAR(120) NOT NULL,
       phone VARCHAR(25) NOT NULL DEFAULT '',
+      home_address VARCHAR(255) NOT NULL DEFAULT '',
+      avatar_url VARCHAR(255) NOT NULL DEFAULT '',
       password VARCHAR(255) NOT NULL,
       role ENUM('admin', 'landlord', 'renter', 'technician') NOT NULL DEFAULT 'renter',
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -195,6 +197,16 @@ async function initDatabase() {
 
   await activePool.query(`
     ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS home_address VARCHAR(255) NOT NULL DEFAULT '' AFTER phone
+  `);
+
+  await activePool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(255) NOT NULL DEFAULT '' AFTER home_address
+  `);
+
+  await activePool.query(`
+    ALTER TABLE users
     ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER role
   `);
 
@@ -207,6 +219,8 @@ async function initDatabase() {
     ALTER TABLE users
     MODIFY COLUMN email VARCHAR(120) NOT NULL,
     MODIFY COLUMN phone VARCHAR(25) NOT NULL DEFAULT '',
+    MODIFY COLUMN home_address VARCHAR(255) NOT NULL DEFAULT '',
+    MODIFY COLUMN avatar_url VARCHAR(255) NOT NULL DEFAULT '',
     MODIFY COLUMN role ENUM('admin', 'landlord', 'renter', 'technician') NOT NULL DEFAULT 'renter'
   `);
 

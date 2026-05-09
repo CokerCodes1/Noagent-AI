@@ -1,5 +1,8 @@
 import { buildWhatsAppMessageLink } from "../../utils/whatsapp.js";
+import usePagination from "../../hooks/usePagination.js";
 import { formatNaira } from "../../utils/propertyListing.js";
+import PaginatedContent from "../shared/PaginatedContent.jsx";
+import PaginationControls from "../shared/PaginationControls.jsx";
 
 export default function LandlordTenantsSection({
   form,
@@ -14,6 +17,8 @@ export default function LandlordTenantsSection({
   messageTemplate,
   setMessageTemplate
 }) {
+  const tenantsPagination = usePagination(tenants);
+
   function messageAllTenants() {
     tenants.forEach((tenant) => {
       const link = buildWhatsAppMessageLink(tenant.whatsapp || tenant.phone, messageTemplate);
@@ -133,8 +138,12 @@ export default function LandlordTenantsSection({
         {tenants.length === 0 ? (
           <div className="status-card">No tenants added yet.</div>
         ) : (
-          <div className="dashboard-list">
-            {tenants.map((tenant) => (
+          <>
+            <PaginatedContent
+              className="dashboard-list"
+              pageKey={`tenants-${tenantsPagination.currentPage}`}
+            >
+              {tenantsPagination.pageItems.map((tenant) => (
               <article key={tenant.id} className="listing-row compact admin-user-row">
                 <div className="listing-copy">
                   <div className="admin-user-heading">
@@ -164,8 +173,22 @@ export default function LandlordTenantsSection({
                   </button>
                 </div>
               </article>
-            ))}
-          </div>
+              ))}
+            </PaginatedContent>
+
+            <PaginationControls
+              currentPage={tenantsPagination.currentPage}
+              endIndex={tenantsPagination.endIndex}
+              goToNextPage={tenantsPagination.goToNextPage}
+              goToPage={tenantsPagination.goToPage}
+              goToPreviousPage={tenantsPagination.goToPreviousPage}
+              label="tenants"
+              pageNumbers={tenantsPagination.pageNumbers}
+              startIndex={tenantsPagination.startIndex}
+              totalItems={tenantsPagination.totalItems}
+              totalPages={tenantsPagination.totalPages}
+            />
+          </>
         )}
       </div>
     </div>
