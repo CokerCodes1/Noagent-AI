@@ -342,23 +342,39 @@ export default function TechnicianDashboard() {
 
                 <div className="dashboard-list">
                   <article className="card technician-card preview-card">
-                    <div className="card-content">
-                      <div className="property-heading">
+                    <div className="card-content technician-card-shell">
+                      <div className="property-card-badge-row">
+                        <span className="pill neutral">
+                          {profile?.category || "Category"}
+                        </span>
+                        <span className="pill available">Preview</span>
+                      </div>
+
+                      <div className="property-card-title-row">
                         <div>
                           <h3>{profile?.name || "Your business name"}</h3>
-                          <p>{profile?.category || "Choose a category"}</p>
+                          <p className="section-meta">
+                            {profile?.category || "Choose a category"}
+                          </p>
                         </div>
                       </div>
 
                       <p className="property-description">
                         {profile?.description || "Add a short description of your services."}
                       </p>
-                      <p className="section-meta">
-                        {profile?.office_address || "Add your office address"}
-                      </p>
-                      <p className="section-meta">
-                        {profile?.phone || "Add a phone number"}
-                      </p>
+
+                      <div className="technician-card-highlights">
+                        <div className="technician-card-highlight">
+                          <span>Office</span>
+                          <strong>
+                            {profile?.office_address || "Add your office address"}
+                          </strong>
+                        </div>
+                        <div className="technician-card-highlight">
+                          <span>Phone</span>
+                          <strong>{profile?.phone || "Add a phone number"}</strong>
+                        </div>
+                      </div>
                     </div>
                   </article>
 

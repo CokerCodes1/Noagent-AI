@@ -2,6 +2,7 @@ import { toast } from "react-toastify";
 import { BACKEND_URL, extractErrorMessage } from "../../api/axios.js";
 import usePagination from "../../hooks/usePagination.js";
 import { formatNaira } from "../../utils/propertyListing.js";
+import EmptyStateCard from "../shared/EmptyStateCard.jsx";
 import PaginatedContent from "../shared/PaginatedContent.jsx";
 import PaginationControls from "../shared/PaginationControls.jsx";
 
@@ -119,7 +120,10 @@ export default function LandlordPropertySection({
         </div>
 
         {properties.length === 0 ? (
-          <div className="status-card">No listings found for this category yet.</div>
+          <EmptyStateCard
+            title={`No ${listingPurpose === "sale" ? "sale" : "rental"} listings yet`}
+            description="Create your first listing from the form on the left and it will appear here with responsive actions and cleaner media presentation."
+          />
         ) : (
           <>
             <PaginatedContent
@@ -127,46 +131,101 @@ export default function LandlordPropertySection({
               pageKey={`${listingPurpose}-properties-${propertiesPagination.currentPage}`}
             >
               {propertiesPagination.pageItems.map((property) => (
-              <article key={property.id} className="listing-row">
-                {property.images[0] ? (
-                  <img src={`${BACKEND_URL}/uploads/${property.images[0]}`} alt={property.type} />
-                ) : (
-                  <div className="empty-media admin-listing-empty">No image</div>
-                )}
-
-                <div className="listing-copy">
-                  <div className="admin-user-heading">
-                    <h3>{property.type}</h3>
-                    <span className={`pill ${property.status}`}>{property.status}</span>
-                    <span className={`pill ${property.listing_purpose}`}>{property.listing_purpose_label}</span>
+                <article key={property.id} className="listing-row">
+                  <div className="listing-row-media">
+                    {property.images[0] ? (
+                      <img
+                        src={`${BACKEND_URL}/uploads/${property.images[0]}`}
+                        alt={property.type}
+                      />
+                    ) : (
+                      <div className="empty-media admin-listing-empty">No image</div>
+                    )}
                   </div>
-                  <p>{property.location}</p>
-                  <p>{formatNaira(property.price)}</p>
-                  <p>Contact {property.contact_label}: {formatNaira(property.contact_fee_naira)}</p>
-                </div>
 
-                <div className="listing-actions">
-                  {property.wa_link ? (
-                    <a className="btn secondary" href={property.wa_link} target="_blank" rel="noreferrer">
-                      WhatsApp
-                    </a>
-                  ) : null}
-                  <button
-                    className="btn"
-                    type="button"
-                    onClick={() => onStatusChange(property, listingPurpose === "sale" ? "sold" : "rented")}
-                    disabled={property.status === (listingPurpose === "sale" ? "sold" : "rented")}
-                  >
-                    {property.status === (listingPurpose === "sale" ? "sold" : "rented")
-                      ? listingPurpose === "sale"
-                        ? "Already Sold"
-                        : "Already Rented"
-                      : listingPurpose === "sale"
-                        ? "Mark as Sold"
-                      : "Mark as Rented"}
-                  </button>
-                </div>
-              </article>
+                  <div className="listing-row-content">
+                    <div className="listing-row-header">
+                      <div>
+                        <h3>{property.type}</h3>
+                        <p>{property.location}</p>
+                      </div>
+                      <strong className="listing-row-price">
+                        {formatNaira(property.price)}
+                      </strong>
+                    </div>
+
+                    <div className="listing-tag-row">
+                      <span className={`pill ${property.status}`}>{property.status}</span>
+                      <span className={`pill ${property.listing_purpose}`}>
+                        {property.listing_purpose_label}
+                      </span>
+                    </div>
+
+                    <div className="listing-row-meta">
+                      <div className="listing-row-meta-item">
+                        <span>Location</span>
+                        <strong>{property.location}</strong>
+                      </div>
+                      <div className="listing-row-meta-item">
+                        <span>Contact Fee</span>
+                        <strong>
+                          Contact {property.contact_label}:{" "}
+                          {formatNaira(property.contact_fee_naira)}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <p className="listing-row-summary">
+                      {property.description || "No description added yet."}
+                    </p>
+                  </div>
+
+                  <div className="listing-row-side">
+                    <div className="listing-actions">
+                      <span className="section-meta">
+                        {property.status === "available"
+                          ? "Currently visible to renters"
+                          : "This listing is archived from discovery"}
+                      </span>
+                    </div>
+
+                    <div className="listing-row-action-group">
+                      {property.wa_link ? (
+                        <a
+                          className="btn secondary"
+                          href={property.wa_link}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          WhatsApp
+                        </a>
+                      ) : null}
+                      <button
+                        className="btn"
+                        type="button"
+                        onClick={() =>
+                          onStatusChange(
+                            property,
+                            listingPurpose === "sale" ? "sold" : "rented"
+                          )
+                        }
+                        disabled={
+                          property.status ===
+                          (listingPurpose === "sale" ? "sold" : "rented")
+                        }
+                      >
+                        {property.status ===
+                        (listingPurpose === "sale" ? "sold" : "rented")
+                          ? listingPurpose === "sale"
+                            ? "Already Sold"
+                            : "Already Rented"
+                          : listingPurpose === "sale"
+                            ? "Mark as Sold"
+                            : "Mark as Rented"}
+                      </button>
+                    </div>
+                  </div>
+                </article>
               ))}
             </PaginatedContent>
 

@@ -3,6 +3,7 @@ import { useState } from "react";
 import usePagination from "../../hooks/usePagination.js";
 import PaginationControls from "../shared/PaginationControls.jsx";
 import PaginatedContent from "../shared/PaginatedContent.jsx";
+import EmptyStateCard from "../shared/EmptyStateCard.jsx";
 import {
   FiSearch,
   FiTrash2,
@@ -67,10 +68,7 @@ export default function AdminLoanRequestsSection({
           </div>
         </div>
 
-        <div
-          className="hero-search"
-          style={{ marginTop: "1.25rem", marginBottom: "1.5rem" }}
-        >
+        <div className="hero-search loan-request-filters">
           <div className="input-shell">
             <FiSearch className="input-icon" />
             <input
@@ -95,18 +93,14 @@ export default function AdminLoanRequestsSection({
         </div>
 
         {filteredRequests.length === 0 ? (
-          <div className="admin-empty-state">
-            <p>No loan requests found.</p>
-            {searchQuery || filterType !== "all" ? (
-              <p className="form-hint">
-                Try adjusting your search or filter criteria.
-              </p>
-            ) : (
-              <p className="form-hint">
-                Loan applications will appear here when submitted.
-              </p>
-            )}
-          </div>
+          <EmptyStateCard
+            title="No loan requests found"
+            description={
+              searchQuery || filterType !== "all"
+                ? "Try adjusting your search query or loan-type filter."
+                : "Loan applications will appear here when submitted from the homepage."
+            }
+          />
         ) : (
           <>
             <PaginatedContent
@@ -129,7 +123,7 @@ export default function AdminLoanRequestsSection({
                   <div className="testimonial-admin-avatar">
                     {request.name?.charAt(0)?.toUpperCase() || "?"}
                   </div>
-                  <div style={{ minWidth: 0 }}>
+                  <div className="loan-request-head-copy">
                     <h3>{request.name}</h3>
                     <span
                       className={`pill ${loanTypeColors[request.loanType]}`}
@@ -140,38 +134,31 @@ export default function AdminLoanRequestsSection({
                 </div>
 
                 <div className="testimonial-admin-copy">
-                  <div
-                    className="listing-tag-row"
-                    style={{ marginTop: "0.75rem" }}
-                  >
-                    <FiPhone style={{ opacity: 0.65, fontSize: "0.9rem" }} />
+                  <div className="listing-tag-row loan-request-row">
+                    <FiPhone className="loan-request-row-icon" />
                     <span>{request.phone || "Not provided"}</span>
                   </div>
 
-                  <div className="listing-tag-row">
-                    <FiMapPin style={{ opacity: 0.65, fontSize: "0.9rem" }} />
+                  <div className="listing-tag-row loan-request-row">
+                    <FiMapPin className="loan-request-row-icon" />
                     <span>{request.address || "Not provided"}</span>
                   </div>
 
-                  <div className="listing-tag-row">
-                    <FiBriefcase
-                      style={{ opacity: 0.65, fontSize: "0.9rem" }}
-                    />
+                  <div className="listing-tag-row loan-request-row">
+                    <FiBriefcase className="loan-request-row-icon" />
                     <span>{request.occupation || "Not provided"}</span>
                   </div>
 
-                  <div className="listing-tag-row">
-                    <FiUser style={{ opacity: 0.65, fontSize: "0.9rem" }} />
+                  <div className="listing-tag-row loan-request-row">
+                    <FiUser className="loan-request-row-icon" />
                     <span>
                       Landlord: {request.landlordName || "Not provided"}
                     </span>
                   </div>
 
                   {request.monthlyIncome > 0 && (
-                    <div className="listing-tag-row">
-                      <span
-                        style={{ fontWeight: 600, color: "var(--accent-dark)" }}
-                      >
+                    <div className="listing-tag-row loan-request-row">
+                      <span className="loan-request-income">
                         Income: {formatCurrency(request.monthlyIncome)}
                       </span>
                     </div>
@@ -179,10 +166,8 @@ export default function AdminLoanRequestsSection({
                 </div>
 
                 <div className="testimonial-admin-footer">
-                  <small>
-                    <FiCalendar
-                      style={{ marginRight: "0.35rem", opacity: 0.65 }}
-                    />
+                  <small className="loan-request-date">
+                    <FiCalendar className="loan-request-row-icon" />
                     {formatDate(request.createdAt)}
                   </small>
 
@@ -222,24 +207,6 @@ export default function AdminLoanRequestsSection({
         )}
       </div>
 
-      <style>{`
-        .admin-empty-state {
-          padding: 3rem 1.5rem;
-          text-align: center;
-          border: 1px solid var(--line);
-          background: rgba(255, 255, 255, 0.5);
-          border-radius: 24px;
-        }
-        .admin-empty-state p {
-          margin: 0;
-          color: var(--muted-strong);
-        }
-        .form-hint {
-          color: var(--muted);
-          font-size: 0.95rem;
-          margin-top: 0.35rem;
-        }
-      `}</style>
     </>
   );
 }

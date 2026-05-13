@@ -1,5 +1,6 @@
 import { buildWhatsAppMessageLink } from "../../utils/whatsapp.js";
 import usePagination from "../../hooks/usePagination.js";
+import EmptyStateCard from "../shared/EmptyStateCard.jsx";
 import PaginatedContent from "../shared/PaginatedContent.jsx";
 import PaginationControls from "../shared/PaginationControls.jsx";
 
@@ -71,7 +72,10 @@ export default function LandlordManagementSection({
         </div>
 
         {overdueTenants.length === 0 ? (
-          <div className="status-card">No overdue tenants right now.</div>
+          <EmptyStateCard
+            title="No overdue tenants right now"
+            description="When rent dates pass, affected tenants will surface here with quick reminder actions."
+          />
         ) : (
           <>
             <PaginatedContent
@@ -79,27 +83,44 @@ export default function LandlordManagementSection({
               pageKey={`overdue-tenants-${overduePagination.currentPage}`}
             >
               {overduePagination.pageItems.map((tenant) => (
-              <article key={tenant.id} className="listing-row compact admin-user-row">
-                <div className="listing-copy">
-                  <div className="admin-user-heading">
-                    <h3>{tenant.name}</h3>
-                    <span className="pill rented">Overdue</span>
-                  </div>
-                  <p>Rent expiry: {tenant.rent_expiry_date}</p>
-                  <p>Sanitation: {tenant.sanitation_date || "Not assigned"}</p>
-                </div>
+                <article key={tenant.id} className="listing-row compact admin-user-row">
+                  <div className="listing-row-content">
+                    <div className="listing-row-header">
+                      <div>
+                        <h3>{tenant.name}</h3>
+                        <p>{tenant.phone}</p>
+                      </div>
+                      <span className="pill rented">Overdue</span>
+                    </div>
 
-                <div className="listing-actions admin-user-actions">
-                  <a
-                    className="btn secondary"
-                    href={buildWhatsAppMessageLink(tenant.whatsapp || tenant.phone, reminderMessage)}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Send Reminder
-                  </a>
-                </div>
-              </article>
+                    <div className="listing-row-meta">
+                      <div className="listing-row-meta-item">
+                        <span>Rent Expiry</span>
+                        <strong>{tenant.rent_expiry_date}</strong>
+                      </div>
+                      <div className="listing-row-meta-item">
+                        <span>Sanitation</span>
+                        <strong>{tenant.sanitation_date || "Not assigned"}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="listing-row-side">
+                    <div className="listing-row-action-group admin-user-actions">
+                      <a
+                        className="btn secondary"
+                        href={buildWhatsAppMessageLink(
+                          tenant.whatsapp || tenant.phone,
+                          reminderMessage
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Send Reminder
+                      </a>
+                    </div>
+                  </div>
+                </article>
               ))}
             </PaginatedContent>
 

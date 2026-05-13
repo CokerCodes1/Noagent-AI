@@ -1,10 +1,14 @@
 import { useState } from "react";
+import { FiMapPin, FiPhone, FiPlayCircle } from "react-icons/fi";
+import { FaWhatsapp } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import api, { BACKEND_URL, extractErrorMessage } from "../api/axios.js";
 import VideoModal from "./VideoModal.jsx";
 import {
+  formatNaira,
   getContactPersonLabel,
+  getContactFeeNaira,
   getListingPurposeLabel
 } from "../utils/propertyListing.js";
 
@@ -59,14 +63,16 @@ export default function PropertyCard({ property, onPaymentStateChange }) {
   return (
     <article className="card property-card">
       <div className="property-media">
-        {currentImage ? (
-          <img
-            src={`${BACKEND_URL}/uploads/${currentImage}`}
-            alt={`${property.type} in ${property.location}`}
-          />
-        ) : (
-          <div className="empty-media">No image uploaded</div>
-        )}
+        <div className="property-media-frame">
+          {currentImage ? (
+            <img
+              src={`${BACKEND_URL}/uploads/${currentImage}`}
+              alt={`${property.type} in ${property.location}`}
+            />
+          ) : (
+            <div className="empty-media">No image uploaded</div>
+          )}
+        </div>
 
         {images.length > 1 ? (
           <div className="thumb-row">
@@ -89,54 +95,92 @@ export default function PropertyCard({ property, onPaymentStateChange }) {
         ) : null}
       </div>
 
-      <div className="card-content">
-        <div className="property-heading">
-          <div>
-            <h3>{property.type}</h3>
-            <p>{property.location}</p>
-          </div>
-          <strong>N{Number(property.price).toLocaleString()}</strong>
+      <div className="card-content property-card-shell">
+        <div className="property-card-badge-row">
+          <span className={`pill ${property.listing_purpose || "rent"}`}>
+            {listingPurposeLabel}
+          </span>
+          <span className={`pill ${property.status || "available"}`}>
+            {property.status || "available"}
+          </span>
         </div>
 
-        <div className="listing-tag-row">
-          <span className={`pill ${property.listing_purpose || "rent"}`}>{listingPurposeLabel}</span>
+        <div className="property-card-title-row">
+          <div>
+            <h3>{property.type}</h3>
+            <p className="section-meta">{property.location}</p>
+          </div>
+          <strong className="property-card-price">
+            {formatNaira(property.price)}
+          </strong>
+        </div>
+
+        <div className="property-card-meta">
+          <div className="property-card-meta-item">
+            <span>Location</span>
+            <strong>{property.location}</strong>
+          </div>
+          <div className="property-card-meta-item">
+            <span>Access</span>
+            <strong>
+              {isUnlocked
+                ? `Direct ${contactLabel.toLowerCase()} contact`
+                : `Unlock ${contactLabel.toLowerCase()} contact`}
+            </strong>
+          </div>
         </div>
 
         <p className="property-description">{property.description}</p>
 
-        <div className="button-row">
-          <button
-            className="btn secondary"
-            type="button"
-            onClick={() => setShowVideo(true)}
-          >
-            Watch Video
-          </button>
+        <div className="property-card-footer">
+          <div className="property-card-contact">
+            <p className="section-meta">
+              <FiMapPin aria-hidden="true" /> {property.location}
+            </p>
+            <p className="property-fee-note">
+              <FiPhone aria-hidden="true" /> Contact fee:{" "}
+              {formatNaira(getContactFeeNaira(property))}
+            </p>
+          </div>
 
-          {isUnlocked ? (
-            <>
-              <a className="btn primary" href={`tel:${property.phone}`}>
-                Call {contactLabel}
-              </a>
-              <a
-                className="btn"
-                href={property.wa_link}
-                target="_blank"
-                rel="noreferrer"
-              >
-                WhatsApp {contactLabel}
-              </a>
-            </>
-          ) : (
+          <div className="property-card-actions">
             <button
-              className="btn primary"
+              className="btn secondary"
               type="button"
-              onClick={handlePayment}
-              disabled={paying}
+              onClick={() => setShowVideo(true)}
             >
-              {paying ? "Redirecting..." : `Contact ${contactLabel}`}
+              <FiPlayCircle aria-hidden="true" />
+              Watch Video
             </button>
-          )}
+
+            {isUnlocked ? (
+              <>
+                <a className="btn primary" href={`tel:${property.phone}`}>
+                  <FiPhone aria-hidden="true" />
+                  Call {contactLabel}
+                </a>
+                <a
+                  className="btn"
+                  href={property.wa_link}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <FaWhatsapp aria-hidden="true" />
+                  WhatsApp {contactLabel}
+                </a>
+              </>
+            ) : (
+              <button
+                className="btn primary"
+                type="button"
+                onClick={handlePayment}
+                disabled={paying}
+              >
+                <FiPhone aria-hidden="true" />
+                {paying ? "Redirecting..." : `Contact ${contactLabel}`}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

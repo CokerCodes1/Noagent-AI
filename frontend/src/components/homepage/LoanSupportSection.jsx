@@ -65,11 +65,11 @@ export default function LoanSupportSection() {
             </p>
           </Reveal>
 
-          <div className="grid" style={{ marginTop: "2rem" }}>
+          <div className="grid loan-support-grid">
             {loanCards.map((card, index) => (
               <Motion.article
                 key={card.id}
-                className="homepage-feature-card"
+                className="homepage-feature-card loan-support-card"
                 initial={{ opacity: 0, y: 28 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
@@ -83,14 +83,13 @@ export default function LoanSupportSection() {
                   <card.icon size={28} />
                 </div>
 
-                <div style={{ minWidth: 0 }}>
-                  <h3 style={{ color: '#D2691E' }}>{card.title}</h3>
+                <div className="loan-support-card-copy">
+                  <h3>{card.title}</h3>
                   <p>{card.description}</p>
 
                   <button
                     type="button"
                     className="btn primary"
-                    style={{ marginTop: "1rem" }}
                     onClick={() => handleApplyNow(card.id)}
                   >
                     Apply Now
@@ -101,41 +100,28 @@ export default function LoanSupportSection() {
             ))}
           </div>
 
-          <div
-            className="homepage-feature-list"
-            style={{
-              marginTop: "2.5rem",
-              padding: "1.5rem",
-              borderRadius: "24px",
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.1)",
-            }}
-          >
-            <div
-              className="homepage-feature-card"
-              style={{ background: "transparent" }}
-            >
+          <div className="homepage-feature-list loan-support-note-grid">
+            <div className="homepage-feature-card loan-support-note-card">
               <div className="homepage-feature-icon">
                 <FiShield size={28} />
               </div>
               <div>
-                <h3 style={{ color: '#FFD700' }}>Trusted & Secure</h3>
-                <p style={{ color: '#FFD700' }}>
+                <h3>Trusted & Secure</h3>
+                <p>
                   Your information is protected with enterprise-grade security.
                 </p>
               </div>
             </div>
 
-            <div
-              className="homepage-feature-card"
-              style={{ background: "transparent" }}
-            >
+            <div className="homepage-feature-card loan-support-note-card">
               <div className="homepage-feature-icon">
                 <FiUser size={28} />
               </div>
               <div>
-                <h3 style={{ color: '#FFD700' }}>Personalized Support</h3>
-                <p style={{ color: '#FFD700' }}>Dedicated assistance throughout your application journey.</p>
+                <h3>Personalized Support</h3>
+                <p>
+                  Dedicated assistance throughout your application journey.
+                </p>
               </div>
             </div>
           </div>
@@ -176,21 +162,6 @@ export default function LoanSupportSection() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
       />
-
-      <style>{`
-        .homepage-section {
-          position: relative;
-          overflow: hidden;
-        }
-        .homepage-background-accent {
-          opacity: 0.6;
-        }
-        @media (max-width: 1024px) {
-          .homepage-background-accent {
-            display: none;
-          }
-        }
-      `}</style>
     </>
   );
 }

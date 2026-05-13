@@ -1,5 +1,6 @@
 import { BACKEND_URL } from "../../api/axios.js";
 import usePagination from "../../hooks/usePagination.js";
+import EmptyStateCard from "../shared/EmptyStateCard.jsx";
 import PaginatedContent from "../shared/PaginatedContent.jsx";
 import PaginationControls from "../shared/PaginationControls.jsx";
 import { formatCurrency } from "./adminConfig.js";
@@ -39,12 +40,6 @@ export default function AdminPropertiesSection({
             <h2>{isEditingProperty ? "Edit property" : "Create property"}</h2>
           </div>
         </div>
-
-        <p className="section-copy">
-          Admins can create listings for landlords, update any listing, and remove
-          properties even when they were originally posted by landlords. Rent
-          listings unlock at N1,000 while sale listings unlock at N10,000.
-        </p>
 
         <p className="section-copy">
           Admins can create listings for landlords, update any listing, and remove
@@ -218,7 +213,10 @@ export default function AdminPropertiesSection({
         {propertiesLoading ? (
           <div className="status-card">Loading properties...</div>
         ) : filteredProperties.length === 0 ? (
-          <div className="status-card">No properties found for this filter.</div>
+          <EmptyStateCard
+            title="No properties match this filter"
+            description="Adjust the status tabs or create a new managed property to populate this inventory view."
+          />
         ) : (
           <>
             <PaginatedContent
@@ -226,50 +224,89 @@ export default function AdminPropertiesSection({
               pageKey={`properties-${propertiesPagination.currentPage}`}
             >
               {propertiesPagination.pageItems.map((property) => (
-              <article key={property.id} className="listing-row">
-                {property.images[0] ? (
-                  <img
-                    src={`${BACKEND_URL}/uploads/${property.images[0]}`}
-                    alt={property.type}
-                  />
-                ) : (
-                  <div className="empty-media admin-listing-empty">No image</div>
-                )}
-
-                <div className="listing-copy">
-                  <div className="admin-user-heading">
-                    <h3>{property.type}</h3>
-                    <span className={`pill ${property.status}`}>{property.status}</span>
-                    <span className={`pill ${property.listing_purpose}`}>{property.listing_purpose_label}</span>
+                <article key={property.id} className="listing-row">
+                  <div className="listing-row-media">
+                    {property.images[0] ? (
+                      <img
+                        src={`${BACKEND_URL}/uploads/${property.images[0]}`}
+                        alt={property.type}
+                      />
+                    ) : (
+                      <div className="empty-media admin-listing-empty">No image</div>
+                    )}
                   </div>
-                  <p>{property.location}</p>
-                  <p>Landlord: {property.landlord_name || "Unknown"}</p>
-                  <p>Phone: {property.phone || "No phone added"}</p>
-                  <p>
-                    Contact {property.contact_label}: {formatNaira(property.contact_fee_naira)}
-                  </p>
-                  <p>Unlocks: {property.unlocks_count}</p>
-                </div>
 
-                <div className="listing-actions">
-                  <strong>{formatCurrency(property.price)}</strong>
-                  <button
-                    className="btn secondary"
-                    type="button"
-                    onClick={() => handleEditProperty(property)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn danger"
-                    type="button"
-                    onClick={() => handleDeleteProperty(property)}
-                    disabled={deletingPropertyId === property.id}
-                  >
-                    {deletingPropertyId === property.id ? "Deleting..." : "Delete"}
-                  </button>
-                </div>
-              </article>
+                  <div className="listing-row-content">
+                    <div className="listing-row-header">
+                      <div>
+                        <h3>{property.type}</h3>
+                        <p>{property.location}</p>
+                      </div>
+                      <strong className="listing-row-price">
+                        {formatCurrency(property.price)}
+                      </strong>
+                    </div>
+
+                    <div className="listing-tag-row">
+                      <span className={`pill ${property.status}`}>{property.status}</span>
+                      <span className={`pill ${property.listing_purpose}`}>
+                        {property.listing_purpose_label}
+                      </span>
+                    </div>
+
+                    <div className="listing-row-meta">
+                      <div className="listing-row-meta-item">
+                        <span>Landlord</span>
+                        <strong>{property.landlord_name || "Unknown"}</strong>
+                      </div>
+                      <div className="listing-row-meta-item">
+                        <span>Phone</span>
+                        <strong>{property.phone || "No phone added"}</strong>
+                      </div>
+                      <div className="listing-row-meta-item">
+                        <span>Contact Fee</span>
+                        <strong>
+                          Contact {property.contact_label}:{" "}
+                          {formatNaira(property.contact_fee_naira)}
+                        </strong>
+                      </div>
+                      <div className="listing-row-meta-item">
+                        <span>Unlocks</span>
+                        <strong>{property.unlocks_count}</strong>
+                      </div>
+                    </div>
+
+                    <p className="listing-row-summary">
+                      {property.description || "No description added yet."}
+                    </p>
+                  </div>
+
+                  <div className="listing-row-side">
+                    <div className="listing-actions">
+                      <span className="section-meta">
+                        Managed listing with synchronized unlock pricing.
+                      </span>
+                    </div>
+
+                    <div className="listing-row-action-group">
+                      <button
+                        className="btn secondary"
+                        type="button"
+                        onClick={() => handleEditProperty(property)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn danger"
+                        type="button"
+                        onClick={() => handleDeleteProperty(property)}
+                        disabled={deletingPropertyId === property.id}
+                      >
+                        {deletingPropertyId === property.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                </article>
               ))}
             </PaginatedContent>
 

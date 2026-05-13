@@ -1,6 +1,7 @@
 import { buildWhatsAppMessageLink } from "../../utils/whatsapp.js";
 import usePagination from "../../hooks/usePagination.js";
 import { formatNaira } from "../../utils/propertyListing.js";
+import EmptyStateCard from "../shared/EmptyStateCard.jsx";
 import PaginatedContent from "../shared/PaginatedContent.jsx";
 import PaginationControls from "../shared/PaginationControls.jsx";
 
@@ -136,7 +137,10 @@ export default function LandlordTenantsSection({
         </div>
 
         {tenants.length === 0 ? (
-          <div className="status-card">No tenants added yet.</div>
+          <EmptyStateCard
+            title="No tenants added yet"
+            description="Create tenant records from the form so you can send reminders, track rent dates, and organize contact history."
+          />
         ) : (
           <>
             <PaginatedContent
@@ -144,35 +148,62 @@ export default function LandlordTenantsSection({
               pageKey={`tenants-${tenantsPagination.currentPage}`}
             >
               {tenantsPagination.pageItems.map((tenant) => (
-              <article key={tenant.id} className="listing-row compact admin-user-row">
-                <div className="listing-copy">
-                  <div className="admin-user-heading">
-                    <h3>{tenant.name}</h3>
-                    {tenant.is_overdue ? <span className="pill rented">Overdue</span> : <span className="pill available">Active</span>}
-                  </div>
-                  <p>{tenant.phone}</p>
-                  <p>Rent amount: {formatNaira(tenant.rent_amount)}</p>
-                  <p>Expiry: {tenant.rent_expiry_date}</p>
-                  <p>Sanitation: {tenant.sanitation_date || "Not assigned"}</p>
-                </div>
+                <article key={tenant.id} className="listing-row compact admin-user-row">
+                  <div className="listing-row-content">
+                    <div className="listing-row-header">
+                      <div>
+                        <h3>{tenant.name}</h3>
+                        <p>{tenant.phone}</p>
+                      </div>
+                      {tenant.is_overdue ? (
+                        <span className="pill rented">Overdue</span>
+                      ) : (
+                        <span className="pill available">Active</span>
+                      )}
+                    </div>
 
-                <div className="listing-actions admin-user-actions">
-                  <a
-                    className="btn secondary"
-                    href={buildWhatsAppMessageLink(tenant.whatsapp || tenant.phone, messageTemplate)}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Message
-                  </a>
-                  <button className="btn" type="button" onClick={() => onEdit(tenant)}>
-                    Edit
-                  </button>
-                  <button className="btn danger" type="button" onClick={() => onDelete(tenant)}>
-                    Delete
-                  </button>
-                </div>
-              </article>
+                    <div className="listing-row-meta">
+                      <div className="listing-row-meta-item">
+                        <span>Rent Amount</span>
+                        <strong>{formatNaira(tenant.rent_amount)}</strong>
+                      </div>
+                      <div className="listing-row-meta-item">
+                        <span>Expiry</span>
+                        <strong>{tenant.rent_expiry_date}</strong>
+                      </div>
+                      <div className="listing-row-meta-item">
+                        <span>Sanitation</span>
+                        <strong>{tenant.sanitation_date || "Not assigned"}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="listing-row-side">
+                    <div className="listing-row-action-group admin-user-actions">
+                      <a
+                        className="btn secondary"
+                        href={buildWhatsAppMessageLink(
+                          tenant.whatsapp || tenant.phone,
+                          messageTemplate
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Message
+                      </a>
+                      <button className="btn" type="button" onClick={() => onEdit(tenant)}>
+                        Edit
+                      </button>
+                      <button
+                        className="btn danger"
+                        type="button"
+                        onClick={() => onDelete(tenant)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </article>
               ))}
             </PaginatedContent>
 

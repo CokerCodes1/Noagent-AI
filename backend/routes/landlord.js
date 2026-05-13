@@ -1,5 +1,9 @@
 const router = require("express").Router();
-const { authorizeRoles, verifyToken } = require("../middleware/auth");
+const {
+  authorizeRoles,
+  requireApprovedLandlord,
+  verifyToken
+} = require("../middleware/auth");
 const {
   createFinanceRecord,
   createTenant,
@@ -12,7 +16,7 @@ const {
   updateTenant
 } = require("../controllers/landlordController");
 
-router.use(verifyToken, authorizeRoles("landlord", "admin"));
+router.use(verifyToken, authorizeRoles("landlord", "admin"), requireApprovedLandlord);
 
 router.get("/overview", getLandlordOverview);
 router.get("/tenants", getTenants);

@@ -23,6 +23,12 @@ export const adminSections = {
     icon: FiUsers,
     path: "/admin/users"
   },
+  landlordVerifications: {
+    title: "Landlord Verification",
+    subtitle: "Review new landlord applications, documents, and approval decisions.",
+    icon: FiUserCheck,
+    path: "/admin/landlord-verifications"
+  },
   properties: {
     title: "Properties",
     subtitle: "Create, edit, and remove any property listing across the platform.",
@@ -55,13 +61,23 @@ revenue: {
   }
 };
 
-export const navOrder = ["dashboard", "users", "properties", "technicians", "testimonials", "revenue", "loanRequests"];
+export const navOrder = [
+  "dashboard",
+  "users",
+  "landlordVerifications",
+  "properties",
+  "technicians",
+  "testimonials",
+  "revenue",
+  "loanRequests"
+];
 
 export const emptyOverview = {
   stats: {
     users: 0,
     admins: 0,
     landlords: 0,
+    pendingLandlordVerifications: 0,
     technicians: 0,
     renters: 0,
     properties: 0,
@@ -97,7 +113,13 @@ export const emptyManagedPropertyForm = {
 export const dashboardStats = [
   { key: "users", label: "Total users", note: "All accounts", icon: FiUsers },
   { key: "admins", label: "Admins", note: "Privileged operators", icon: FiShield },
-  { key: "landlords", label: "Landlords", note: "Active property owners", icon: FiUserCheck },
+  {
+    key: "landlords",
+    label: "Landlords",
+    noteKey: "pendingLandlordVerifications",
+    noteSuffix: " pending verification",
+    icon: FiUserCheck
+  },
   { key: "technicians", label: "Technicians", note: "Marketplace providers", icon: FiTool },
   { key: "renters", label: "Renters", note: "Property seekers", icon: FiUsers },
   {
@@ -135,6 +157,10 @@ export function getCurrentSection(pathname) {
 
   if (pathname.startsWith("/admin/properties")) {
     return "properties";
+  }
+
+  if (pathname.startsWith("/admin/landlord-verifications")) {
+    return "landlordVerifications";
   }
 
   if (pathname.startsWith("/admin/technicians")) {

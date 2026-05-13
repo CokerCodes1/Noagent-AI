@@ -3,7 +3,15 @@ const router = require("express").Router();
 const { getPool } = require("../config/db");
 const { authorizeRoles, verifyToken } = require("../middleware/auth");
 const upload = require("../middleware/upload");
+const {
+  notifyLandlordApproved,
+  notifyLandlordRejected
+} = require("../utils/landlordVerificationNotifications");
 const { ensureTechnicianRecords } = require("../utils/technicianProfile");
+const {
+  normalizeOptionalText,
+  normalizeVerificationStatus
+} = require("../utils/landlordVerification");
 const {
   getContactPersonLabel,
   getContactUnlockFeeKobo,
@@ -114,11 +122,37 @@ function mapManagedUser(row) {
     name: row.name,
     email: row.email,
     phone: row.phone || "",
+    whatsappNumber: row.whatsapp_number || "",
+    propertyAddress: row.property_address || "",
+    verificationDocument: row.verification_document || "",
+    verificationStatus: row.verification_status || "approved",
+    verificationSubmittedAt: row.verification_submitted_at || null,
+    verifiedAt: row.verified_at || null,
+    verifiedBy: row.verified_by || null,
+    verificationNotes: row.verification_notes || "",
     role: row.role,
     is_protected: normalizeEmail(row.email) === ADMIN_EMAIL,
     created_at: row.created_at,
     properties_count: Number(row.properties_count || 0),
     unlocks_count: Number(row.unlocks_count || 0)
+  };
+}
+
+function mapLandlordVerification(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone || "",
+    whatsappNumber: row.whatsapp_number || "",
+    propertyAddress: row.property_address || "",
+    verificationDocument: row.verification_document || "",
+    verificationStatus: row.verification_status || "pending",
+    verificationSubmittedAt: row.verification_submitted_at || null,
+    verifiedAt: row.verified_at || null,
+    verifiedBy: row.verified_by || null,
+    verificationNotes: row.verification_notes || "",
+    createdAt: row.created_at
   };
 }
 
@@ -195,6 +229,14 @@ async function fetchManagedUserById(pool, userId) {
         u.name,
         u.email,
         u.phone,
+        u.whatsapp_number,
+        u.property_address,
+        u.verification_document,
+        u.verification_status,
+        u.verification_submitted_at,
+        u.verified_at,
+        u.verified_by,
+        u.verification_notes,
         u.role,
         u.created_at,
         COALESCE(property_stats.properties_count, 0) AS properties_count,
@@ -251,11 +293,15 @@ async function fetchManagedPropertyById(pool, propertyId) {
 
 async function ensureAssignableLandlord(pool, landlordId) {
   const [[landlord]] = await pool.execute(
-    "SELECT id, role, name, email FROM users WHERE id = ? LIMIT 1",
+    "SELECT id, role, name, email, verification_status FROM users WHERE id = ? LIMIT 1",
     [landlordId]
   );
 
-  if (!landlord || landlord.role !== "landlord") {
+  if (
+    !landlord ||
+    landlord.role !== "landlord" ||
+    landlord.verification_status !== "approved"
+  ) {
     return null;
   }
 
@@ -269,6 +315,7 @@ router.get("/overview", verifyToken, authorizeRoles("admin"), async (req, res, n
       [usersCountRows],
       [adminsCountRows],
       [landlordsCountRows],
+      [pendingLandlordVerificationRows],
       [rentersCountRows],
       [techniciansCountRows],
       [propertiesCountRows],
@@ -283,6 +330,9 @@ router.get("/overview", verifyToken, authorizeRoles("admin"), async (req, res, n
       pool.execute("SELECT COUNT(*) AS total FROM users"),
       pool.execute("SELECT COUNT(*) AS total FROM users WHERE role = 'admin'"),
       pool.execute("SELECT COUNT(*) AS total FROM users WHERE role = 'landlord'"),
+      pool.execute(
+        "SELECT COUNT(*) AS total FROM users WHERE role = 'landlord' AND verification_status = 'pending'"
+      ),
       pool.execute("SELECT COUNT(*) AS total FROM users WHERE role = 'renter'"),
       pool.execute("SELECT COUNT(*) AS total FROM users WHERE role = 'technician'"),
       pool.execute("SELECT COUNT(*) AS total FROM properties"),
@@ -361,6 +411,7 @@ router.get("/overview", verifyToken, authorizeRoles("admin"), async (req, res, n
         users: usersCountRows[0].total,
         admins: adminsCountRows[0].total,
         landlords: landlordsCountRows[0].total,
+        pendingLandlordVerifications: pendingLandlordVerificationRows[0].total,
         renters: rentersCountRows[0].total,
         technicians: techniciansCountRows[0].total,
         properties: propertiesCountRows[0].total,
@@ -388,6 +439,14 @@ router.get("/users", verifyToken, authorizeRoles("admin"), async (req, res, next
           u.name,
           u.email,
           u.phone,
+          u.whatsapp_number,
+          u.property_address,
+          u.verification_document,
+          u.verification_status,
+          u.verification_submitted_at,
+          u.verified_at,
+          u.verified_by,
+          u.verification_notes,
           u.role,
           u.created_at,
           COALESCE(property_stats.properties_count, 0) AS properties_count,
@@ -420,6 +479,141 @@ router.get("/users", verifyToken, authorizeRoles("admin"), async (req, res, next
     return next(error);
   }
 });
+
+router.get(
+  "/landlord-verifications",
+  verifyToken,
+  authorizeRoles("admin"),
+  async (req, res, next) => {
+    try {
+      const pool = getPool();
+      const [rows] = await pool.execute(
+        `
+          SELECT
+            id,
+            name,
+            email,
+            phone,
+            whatsapp_number,
+            property_address,
+            verification_document,
+            verification_status,
+            verification_submitted_at,
+            verified_at,
+            verified_by,
+            verification_notes,
+            created_at
+          FROM users
+          WHERE role = 'landlord'
+          ORDER BY
+            FIELD(verification_status, 'pending', 'rejected', 'approved'),
+            COALESCE(verification_submitted_at, created_at) DESC
+        `
+      );
+
+      return res.json({
+        applications: rows.map(mapLandlordVerification)
+      });
+    } catch (error) {
+      return next(error);
+    }
+  }
+);
+
+router.patch(
+  "/landlord-verifications/:id",
+  verifyToken,
+  authorizeRoles("admin"),
+  async (req, res, next) => {
+    try {
+      const landlordId = Number(req.params.id);
+      const nextStatus = normalizeVerificationStatus(req.body.verificationStatus);
+      const adminNotes = normalizeOptionalText(req.body.adminNotes, 2000);
+
+      if (!landlordId) {
+        return res.status(400).json({ message: "A valid landlord id is required." });
+      }
+
+      if (!["approved", "rejected"].includes(nextStatus)) {
+        return res.status(400).json({
+          message: "Verification status must be approved or rejected."
+        });
+      }
+
+      const pool = getPool();
+      const [[landlord]] = await pool.execute(
+        `
+          SELECT
+            id,
+            name,
+            email,
+            phone,
+            whatsapp_number,
+            property_address,
+            verification_document,
+            verification_status,
+            verification_submitted_at,
+            verification_notes,
+            role
+          FROM users
+          WHERE id = ?
+          LIMIT 1
+        `,
+        [landlordId]
+      );
+
+      if (!landlord || landlord.role !== "landlord") {
+        return res.status(404).json({ message: "Landlord application not found." });
+      }
+
+      await pool.execute(
+        `
+          UPDATE users
+          SET
+            verification_status = ?,
+            verification_notes = ?,
+            verified_by = ?,
+            verified_at = ?,
+            verification_submitted_at = COALESCE(verification_submitted_at, created_at)
+          WHERE id = ?
+        `,
+        [
+          nextStatus,
+          adminNotes,
+          req.user.id,
+          nextStatus === "approved" ? new Date() : null,
+          landlordId
+        ]
+      );
+
+      const payload = {
+        landlordId,
+        landlordName: landlord.name,
+        email: landlord.email,
+        phone: landlord.phone || "",
+        whatsappNumber: landlord.whatsapp_number || "",
+        propertyAddress: landlord.property_address || "",
+        verificationDocument: landlord.verification_document || "",
+        adminNotes
+      };
+
+      if (nextStatus === "approved") {
+        await notifyLandlordApproved(payload);
+      } else {
+        await notifyLandlordRejected(payload);
+      }
+
+      return res.json({
+        message:
+          nextStatus === "approved"
+            ? "Landlord approved successfully."
+            : "Landlord rejected successfully."
+      });
+    } catch (error) {
+      return next(error);
+    }
+  }
+);
 
 router.post("/users", verifyToken, authorizeRoles("admin"), async (req, res, next) => {
   try {
@@ -461,8 +655,39 @@ router.post("/users", verifyToken, authorizeRoles("admin"), async (req, res, nex
     try {
       await connection.beginTransaction();
       const [result] = await connection.execute(
-        "INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)",
-        [normalizedName, normalizedEmail, normalizedPhone, hashedPassword, normalizedRole]
+        `
+          INSERT INTO users (
+            name,
+            email,
+            phone,
+            whatsapp_number,
+            property_address,
+            verification_document,
+            verification_status,
+            verification_submitted_at,
+            verified_at,
+            verified_by,
+            verification_notes,
+            password,
+            role
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          normalizedName,
+          normalizedEmail,
+          normalizedPhone,
+          "",
+          "",
+          "",
+          normalizedRole === "landlord" ? "approved" : "approved",
+          normalizedRole === "landlord" ? new Date() : null,
+          normalizedRole === "landlord" ? new Date() : null,
+          normalizedRole === "landlord" ? req.user.id : null,
+          "",
+          hashedPassword,
+          normalizedRole
+        ]
       );
 
       if (normalizedRole === "technician") {
@@ -523,7 +748,7 @@ router.put("/users/:id", verifyToken, authorizeRoles("admin"), async (req, res, 
 
     const pool = getPool();
     const [[existingUser]] = await pool.execute(
-      "SELECT id, email, role FROM users WHERE id = ? LIMIT 1",
+      "SELECT id, email, role, verification_status FROM users WHERE id = ? LIMIT 1",
       [userId]
     );
 
@@ -588,6 +813,17 @@ router.put("/users/:id", verifyToken, authorizeRoles("admin"), async (req, res, 
 
       const updates = ["name = ?", "email = ?", "phone = ?", "role = ?"];
       const values = [normalizedName, normalizedEmail, normalizedPhone, normalizedRole];
+
+      if (existingUser.role !== "landlord" && normalizedRole === "landlord") {
+        updates.push(
+          "verification_status = ?",
+          "verification_submitted_at = ?",
+          "verified_at = ?",
+          "verified_by = ?",
+          "verification_notes = ?"
+        );
+        values.push("approved", new Date(), new Date(), req.user.id, "");
+      }
 
       if (password) {
         updates.push("password = ?");

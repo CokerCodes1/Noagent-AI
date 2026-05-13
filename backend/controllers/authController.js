@@ -1,12 +1,24 @@
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
+const fs = require("fs/promises");
 const { OAuth2Client } = require("google-auth-library");
 const { getPool } = require("../config/db");
 const { signToken } = require("../config/jwt");
+const {
+  notifyAdminOfLandlordApplication
+} = require("../utils/landlordVerificationNotifications");
+const {
+  LANDLORD_SUPPORT_CONTACT,
+  getLandlordVerificationMessage,
+  normalizeOptionalText,
+  normalizePhoneNumber
+} = require("../utils/landlordVerification");
 const { ensureTechnicianRecords } = require("../utils/technicianProfile");
 const { sendPasswordResetEmail } = require("../utils/mailer");
 
-const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "cokarproperties001@gmail.com").toLowerCase();
+const ADMIN_EMAIL = (
+  process.env.ADMIN_EMAIL || "cokarproperties001@gmail.com"
+).toLowerCase();
 const PASSWORD_RESET_CODE_TTL_MINUTES = Number(
   process.env.PASSWORD_RESET_CODE_TTL_MINUTES || 15
 );
@@ -66,11 +78,29 @@ function resolveRole(email, requestedRole = "renter") {
     return "technician";
   }
 
-  return requestedRole === "landlord" ? "landlord" : "renter";
+  if (requestedRole === "landlord") {
+    return "landlord";
+  }
+
+  return "renter";
 }
 
 function buildUploadPath(filename = "") {
   return filename ? `/uploads/${filename}` : "";
+}
+
+async function cleanupUploadedFile(file) {
+  if (!file?.path) {
+    return;
+  }
+
+  try {
+    await fs.unlink(file.path);
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      console.error("Failed to clean up uploaded file:", error);
+    }
+  }
 }
 
 function mapAuthUser(user) {
@@ -79,6 +109,15 @@ function mapAuthUser(user) {
     name: user.name,
     email: user.email,
     phone: user.phone || "",
+    phoneNumber: user.phone || "",
+    whatsappNumber: user.whatsapp_number || "",
+    propertyAddress: user.property_address || "",
+    verificationDocument: user.verification_document || "",
+    verificationStatus: user.verification_status || "approved",
+    verificationSubmittedAt: user.verification_submitted_at || null,
+    verifiedAt: user.verified_at || null,
+    verifiedBy: user.verified_by || null,
+    verificationNotes: user.verification_notes || "",
     home_address: user.home_address || "",
     avatar_url: user.avatar_url || "",
     role: user.role
@@ -102,7 +141,23 @@ function createAuthResponse(user) {
 async function fetchUserById(pool, userId) {
   const [users] = await pool.execute(
     `
-      SELECT id, name, email, phone, home_address, avatar_url, password, role
+      SELECT
+        id,
+        name,
+        email,
+        phone,
+        whatsapp_number,
+        property_address,
+        verification_document,
+        verification_status,
+        verification_submitted_at,
+        verified_at,
+        verified_by,
+        verification_notes,
+        home_address,
+        avatar_url,
+        password,
+        role
       FROM users
       WHERE id = ?
       LIMIT 1
@@ -118,40 +173,81 @@ exports.signup = async (req, res, next) => {
     const { name, email, phone = "", password, role } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email, and password are required." });
+      await cleanupUploadedFile(req.file);
+      return res.status(400).json({
+        message: "Name, email, and password are required."
+      });
     }
 
     if (!isPasswordValid(password)) {
-      return res.status(400).json({ message: "Password must be at least 6 characters long." });
+      await cleanupUploadedFile(req.file);
+      return res.status(400).json({
+        message: "Password must be at least 6 characters long."
+      });
     }
 
     const normalizedEmail = normalizeEmail(email);
     const normalizedName = normalizeName(name);
     const normalizedPhone = normalizePhone(phone);
+    const resolvedRole = resolveRole(normalizedEmail, role);
+    const isLandlordSignup = resolvedRole === "landlord";
+    const normalizedWhatsAppNumber = normalizePhoneNumber(
+      req.body.whatsappNumber
+    );
+    const normalizedPropertyAddress = normalizeOptionalText(
+      req.body.propertyAddress,
+      255
+    );
+    const verificationDocumentPath = req.file
+      ? buildUploadPath(`verification-documents/${req.file.filename}`)
+      : "";
 
     if (normalizedEmail === ADMIN_EMAIL) {
+      await cleanupUploadedFile(req.file);
       return res.status(403).json({
         message: "This email is reserved. Contact an admin if you need access."
       });
     }
 
-    if (role === "landlord" || role === "admin") {
+    if (resolvedRole === "admin") {
+      await cleanupUploadedFile(req.file);
       return res.status(403).json({
-        message: "Public signup creates renter or technician accounts only. Admins create landlord and admin accounts."
+        message: "Admin accounts can only be created internally."
       });
     }
 
-    const requestedRole = role === "technician" ? "technician" : "renter";
-    const resolvedRole = resolveRole(normalizedEmail, requestedRole);
-    const pool = getPool();
+    if (isLandlordSignup) {
+      if (
+        !normalizedPhone ||
+        !normalizedWhatsAppNumber ||
+        !normalizedPropertyAddress
+      ) {
+        await cleanupUploadedFile(req.file);
+        return res.status(400).json({
+          message:
+            "Phone number, WhatsApp number, and property address are required for landlord verification."
+        });
+      }
 
+      if (!req.file) {
+        return res.status(400).json({
+          message:
+            "Upload a verification document to continue your landlord registration."
+        });
+      }
+    }
+
+    const pool = getPool();
     const [existingUsers] = await pool.execute(
       "SELECT id FROM users WHERE email = ? LIMIT 1",
       [normalizedEmail]
     );
 
     if (existingUsers.length > 0) {
-      return res.status(409).json({ message: "An account with this email already exists." });
+      await cleanupUploadedFile(req.file);
+      return res.status(409).json({
+        message: "An account with this email already exists."
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -161,8 +257,43 @@ exports.signup = async (req, res, next) => {
       await connection.beginTransaction();
 
       const [result] = await connection.execute(
-        "INSERT INTO users (name, email, phone, home_address, avatar_url, password, role) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [normalizedName, normalizedEmail, normalizedPhone, "", "", hashedPassword, resolvedRole]
+        `
+          INSERT INTO users (
+            name,
+            email,
+            phone,
+            whatsapp_number,
+            property_address,
+            verification_document,
+            verification_status,
+            verification_submitted_at,
+            verified_at,
+            verified_by,
+            verification_notes,
+            home_address,
+            avatar_url,
+            password,
+            role
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          normalizedName,
+          normalizedEmail,
+          normalizedPhone,
+          isLandlordSignup ? normalizedWhatsAppNumber : "",
+          isLandlordSignup ? normalizedPropertyAddress : "",
+          isLandlordSignup ? verificationDocumentPath : "",
+          isLandlordSignup ? "pending" : "approved",
+          isLandlordSignup ? new Date() : null,
+          null,
+          null,
+          "",
+          "",
+          "",
+          hashedPassword,
+          resolvedRole
+        ]
       );
 
       const user = {
@@ -170,6 +301,14 @@ exports.signup = async (req, res, next) => {
         name: normalizedName,
         email: normalizedEmail,
         phone: normalizedPhone,
+        whatsapp_number: isLandlordSignup ? normalizedWhatsAppNumber : "",
+        property_address: isLandlordSignup ? normalizedPropertyAddress : "",
+        verification_document: isLandlordSignup ? verificationDocumentPath : "",
+        verification_status: isLandlordSignup ? "pending" : "approved",
+        verification_submitted_at: isLandlordSignup ? new Date() : null,
+        verified_at: null,
+        verified_by: null,
+        verification_notes: "",
         home_address: "",
         avatar_url: "",
         role: resolvedRole
@@ -181,14 +320,34 @@ exports.signup = async (req, res, next) => {
 
       await connection.commit();
 
+      if (isLandlordSignup) {
+        await notifyAdminOfLandlordApplication({
+          landlordId: user.id,
+          landlordName: user.name,
+          email: user.email,
+          phone: user.phone,
+          whatsappNumber: user.whatsapp_number,
+          propertyAddress: user.property_address,
+          verificationDocument: user.verification_document
+        });
+
+        return res.status(201).json({
+          message: "Registration successful. Your landlord profile is pending verification.",
+          requiresVerification: true,
+          verificationStatus: "pending"
+        });
+      }
+
       return res.status(201).json(createAuthResponse(user));
     } catch (error) {
       await connection.rollback();
+      await cleanupUploadedFile(req.file);
       throw error;
     } finally {
       connection.release();
     }
   } catch (error) {
+    await cleanupUploadedFile(req.file);
     return next(error);
   }
 };
@@ -198,14 +357,32 @@ exports.login = async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required." });
+      return res.status(400).json({
+        message: "Email and password are required."
+      });
     }
 
     const normalizedEmail = normalizeEmail(email);
     const pool = getPool();
     const [users] = await pool.execute(
       `
-        SELECT id, name, email, phone, home_address, avatar_url, password, role
+        SELECT
+          id,
+          name,
+          email,
+          phone,
+          whatsapp_number,
+          property_address,
+          verification_document,
+          verification_status,
+          verification_submitted_at,
+          verified_at,
+          verified_by,
+          verification_notes,
+          home_address,
+          avatar_url,
+          password,
+          role
         FROM users
         WHERE email = ?
         LIMIT 1
@@ -227,8 +404,19 @@ exports.login = async (req, res, next) => {
     const resolvedRole = resolveRole(user.email, user.role);
 
     if (resolvedRole !== user.role) {
-      await pool.execute("UPDATE users SET role = ? WHERE id = ?", [resolvedRole, user.id]);
+      await pool.execute("UPDATE users SET role = ? WHERE id = ?", [
+        resolvedRole,
+        user.id
+      ]);
       user.role = resolvedRole;
+    }
+
+    if (user.role === "landlord" && user.verification_status !== "approved") {
+      return res.status(403).json({
+        message: getLandlordVerificationMessage(user),
+        verificationStatus: user.verification_status,
+        supportContact: LANDLORD_SUPPORT_CONTACT
+      });
     }
 
     return res.json(createAuthResponse(user));
@@ -263,7 +451,9 @@ exports.requestPasswordReset = async (req, res, next) => {
     const codeHash = hashResetCode(normalizedEmail, resetCode);
     const expiresAt = getPasswordResetExpiry();
 
-    await pool.execute("DELETE FROM password_reset_codes WHERE user_id = ?", [user.id]);
+    await pool.execute("DELETE FROM password_reset_codes WHERE user_id = ?", [
+      user.id
+    ]);
     await pool.execute(
       `
         INSERT INTO password_reset_codes (user_id, email, code_hash, expires_at)
@@ -304,7 +494,9 @@ exports.resetPassword = async (req, res, next) => {
     }
 
     if (!isPasswordValid(newPassword)) {
-      return res.status(400).json({ message: "New password must be at least 6 characters long." });
+      return res.status(400).json({
+        message: "New password must be at least 6 characters long."
+      });
     }
 
     const normalizedEmail = normalizeEmail(email);
@@ -312,7 +504,22 @@ exports.resetPassword = async (req, res, next) => {
     const pool = getPool();
     const [users] = await pool.execute(
       `
-        SELECT id, name, email, phone, home_address, avatar_url, role
+        SELECT
+          id,
+          name,
+          email,
+          phone,
+          whatsapp_number,
+          property_address,
+          verification_document,
+          verification_status,
+          verification_submitted_at,
+          verified_at,
+          verified_by,
+          verification_notes,
+          home_address,
+          avatar_url,
+          role
         FROM users
         WHERE email = ?
         LIMIT 1
@@ -343,11 +550,18 @@ exports.resetPassword = async (req, res, next) => {
     const resetEntry = resetRows[0];
 
     if (new Date(resetEntry.expires_at).getTime() < Date.now()) {
-      await pool.execute("DELETE FROM password_reset_codes WHERE id = ?", [resetEntry.id]);
-      return res.status(401).json({ message: "Reset code has expired. Please request another one." });
+      await pool.execute("DELETE FROM password_reset_codes WHERE id = ?", [
+        resetEntry.id
+      ]);
+      return res.status(401).json({
+        message: "Reset code has expired. Please request another one."
+      });
     }
 
-    const receivedCodeHash = hashResetCode(normalizedEmail, normalizedResetCode);
+    const receivedCodeHash = hashResetCode(
+      normalizedEmail,
+      normalizedResetCode
+    );
 
     if (receivedCodeHash !== resetEntry.code_hash) {
       return res.status(401).json({ message: "Invalid or expired reset code." });
@@ -377,6 +591,15 @@ exports.resetPassword = async (req, res, next) => {
 
     user.role = resolvedRole;
 
+    if (user.role === "landlord" && user.verification_status !== "approved") {
+      return res.json({
+        message: `Password reset successful. ${getLandlordVerificationMessage(user)}`,
+        requiresVerification: true,
+        verificationStatus: user.verification_status,
+        supportContact: LANDLORD_SUPPORT_CONTACT
+      });
+    }
+
     return res.json(createAuthResponse(user));
   } catch (error) {
     return next(error);
@@ -386,13 +609,17 @@ exports.resetPassword = async (req, res, next) => {
 exports.googleLogin = async (req, res, next) => {
   try {
     if (!googleClient) {
-      return res.status(503).json({ message: "Google sign-in is not configured on the server." });
+      return res.status(503).json({
+        message: "Google sign-in is not configured on the server."
+      });
     }
 
     const { token } = req.body;
 
     if (!token) {
-      return res.status(400).json({ message: "Google credential is required." });
+      return res.status(400).json({
+        message: "Google credential is required."
+      });
     }
 
     const ticket = await googleClient.verifyIdToken({
@@ -408,7 +635,23 @@ exports.googleLogin = async (req, res, next) => {
 
     const [users] = await pool.execute(
       `
-        SELECT id, name, email, phone, home_address, avatar_url, password, role
+        SELECT
+          id,
+          name,
+          email,
+          phone,
+          whatsapp_number,
+          property_address,
+          verification_document,
+          verification_status,
+          verification_submitted_at,
+          verified_at,
+          verified_by,
+          verification_notes,
+          home_address,
+          avatar_url,
+          password,
+          role
         FROM users
         WHERE email = ?
         LIMIT 1
@@ -427,8 +670,27 @@ exports.googleLogin = async (req, res, next) => {
 
       const randomPasswordHash = await bcrypt.hash(`${Date.now()}-${email}`, 10);
       const [result] = await pool.execute(
-        "INSERT INTO users (name, email, phone, home_address, avatar_url, password, role) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [name, email, "", "", "", randomPasswordHash, resolvedRole]
+        `
+          INSERT INTO users (
+            name,
+            email,
+            phone,
+            whatsapp_number,
+            property_address,
+            verification_document,
+            verification_status,
+            verification_submitted_at,
+            verified_at,
+            verified_by,
+            verification_notes,
+            home_address,
+            avatar_url,
+            password,
+            role
+          )
+          VALUES (?, ?, ?, ?, ?, ?, 'approved', NULL, NULL, NULL, '', ?, ?, ?, ?)
+        `,
+        [name, email, "", "", "", "", "", "", randomPasswordHash, resolvedRole]
       );
 
       user = {
@@ -436,12 +698,23 @@ exports.googleLogin = async (req, res, next) => {
         name,
         email,
         phone: "",
+        whatsapp_number: "",
+        property_address: "",
+        verification_document: "",
+        verification_status: "approved",
+        verification_submitted_at: null,
+        verified_at: null,
+        verified_by: null,
+        verification_notes: "",
         home_address: "",
         avatar_url: "",
         role: resolvedRole
       };
     } else if (user.role !== resolvedRole) {
-      await pool.execute("UPDATE users SET role = ? WHERE id = ?", [resolvedRole, user.id]);
+      await pool.execute("UPDATE users SET role = ? WHERE id = ?", [
+        resolvedRole,
+        user.id
+      ]);
       user.role = resolvedRole;
     }
 
@@ -484,7 +757,10 @@ exports.updateCurrentUser = async (req, res, next) => {
       return res.status(400).json({ message: "Name and email are required." });
     }
 
-    if (normalizedEmail === ADMIN_EMAIL && normalizeEmail(user.email) !== ADMIN_EMAIL) {
+    if (
+      normalizedEmail === ADMIN_EMAIL &&
+      normalizeEmail(user.email) !== ADMIN_EMAIL
+    ) {
       return res.status(403).json({
         message: "This reserved admin email cannot be assigned to another account."
       });
@@ -496,7 +772,9 @@ exports.updateCurrentUser = async (req, res, next) => {
     );
 
     if (emailConflict.length > 0) {
-      return res.status(409).json({ message: "Another account already uses this email." });
+      return res.status(409).json({
+        message: "Another account already uses this email."
+      });
     }
 
     const avatarUrl = req.file

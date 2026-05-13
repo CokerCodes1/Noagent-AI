@@ -1,5 +1,6 @@
 import { BACKEND_URL } from "../../api/axios.js";
 import usePagination from "../../hooks/usePagination.js";
+import EmptyStateCard from "../shared/EmptyStateCard.jsx";
 import PaginatedContent from "../shared/PaginatedContent.jsx";
 import PaginationControls from "../shared/PaginationControls.jsx";
 import AdminStatCard from "./AdminStatCard.jsx";
@@ -68,7 +69,10 @@ export default function AdminOverviewSection({
           </div>
 
           {overview.properties.length === 0 ? (
-            <div className="status-card">No properties found.</div>
+            <EmptyStateCard
+              title="No recent listings yet"
+              description="Once landlords or admins publish properties, the newest activity will appear here."
+            />
           ) : (
             <>
               <PaginatedContent
@@ -76,33 +80,59 @@ export default function AdminOverviewSection({
                 pageKey={`overview-properties-${propertiesPagination.currentPage}`}
               >
                 {propertiesPagination.pageItems.map((property, index) => (
-                <article key={property.id ?? `property-${index}`} className="listing-row">
-                  {property.images[0] ? (
-                    <img
-                      src={`${BACKEND_URL}/uploads/${property.images[0]}`}
-                      alt={property.type}
-                    />
-                  ) : (
-                    <div className="empty-media admin-listing-empty">No image</div>
-                  )}
-                  <div className="listing-copy">
-                    <div className="admin-user-heading">
-                      <h3>{property.type}</h3>
-                      <span className={`pill ${property.status}`}>{property.status}</span>
-                      <span className={`pill ${property.listing_purpose}`}>{property.listing_purpose_label}</span>
+                  <article key={property.id ?? `property-${index}`} className="listing-row">
+                    <div className="listing-row-media">
+                      {property.images[0] ? (
+                        <img
+                          src={`${BACKEND_URL}/uploads/${property.images[0]}`}
+                          alt={property.type}
+                        />
+                      ) : (
+                        <div className="empty-media admin-listing-empty">No image</div>
+                      )}
                     </div>
-                    <p>{property.location}</p>
-                    <p>Landlord: {property.landlord_name || "Unknown"}</p>
-                    <p>
-                      Contact {property.contact_label}: {formatNaira(property.contact_fee_naira)}
-                    </p>
-                    <p>Unlocks: {property.unlocks_count}</p>
-                  </div>
-                  <div className="listing-actions">
-                    <strong>{formatCurrency(property.price)}</strong>
-                    <span>{formatDate(property.created_at)}</span>
-                  </div>
-                </article>
+                    <div className="listing-row-content">
+                      <div className="listing-row-header">
+                        <div>
+                          <h3>{property.type}</h3>
+                          <p>{property.location}</p>
+                        </div>
+                        <strong className="listing-row-price">
+                          {formatCurrency(property.price)}
+                        </strong>
+                      </div>
+                      <div className="listing-tag-row">
+                        <span className={`pill ${property.status}`}>{property.status}</span>
+                        <span className={`pill ${property.listing_purpose}`}>
+                          {property.listing_purpose_label}
+                        </span>
+                      </div>
+                      <div className="listing-row-meta">
+                        <div className="listing-row-meta-item">
+                          <span>Landlord</span>
+                          <strong>{property.landlord_name || "Unknown"}</strong>
+                        </div>
+                        <div className="listing-row-meta-item">
+                          <span>Contact Fee</span>
+                          <strong>
+                            Contact {property.contact_label}:{" "}
+                            {formatNaira(property.contact_fee_naira)}
+                          </strong>
+                        </div>
+                        <div className="listing-row-meta-item">
+                          <span>Unlocks</span>
+                          <strong>{property.unlocks_count}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="listing-row-side">
+                      <div className="listing-actions">
+                        <strong>{formatDate(property.created_at)}</strong>
+                        <span className="section-meta">Recently created listing</span>
+                      </div>
+                    </div>
+                  </article>
                 ))}
               </PaginatedContent>
 
@@ -131,7 +161,10 @@ export default function AdminOverviewSection({
           </div>
 
           {overview.recentTransactions.length === 0 ? (
-            <div className="status-card">No successful transactions yet.</div>
+            <EmptyStateCard
+              title="No successful transactions yet"
+              description="Completed renter unlock payments will begin appearing here automatically."
+            />
           ) : (
             <>
               <PaginatedContent
@@ -139,19 +172,37 @@ export default function AdminOverviewSection({
                 pageKey={`overview-transactions-${transactionsPagination.currentPage}`}
               >
                 {transactionsPagination.pageItems.map((transaction, index) => (
-                <article key={transaction.id ?? `transaction-${index}`} className="listing-row compact">
-                  <div className="listing-copy">
-                    <h3>{formatCurrency(transaction.amount_paid / 100)}</h3>
-                    <p>{transaction.property_type || "Property removed"}</p>
-                    <p>Renter: {transaction.renter_name || "Unknown"}</p>
-                    <p>Reference: {transaction.reference}</p>
-                  </div>
+                  <article
+                    key={transaction.id ?? `transaction-${index}`}
+                    className="listing-row compact"
+                  >
+                    <div className="listing-row-content">
+                      <div className="listing-row-header">
+                        <div>
+                          <h3>{formatCurrency(transaction.amount_paid / 100)}</h3>
+                          <p>{transaction.property_type || "Property removed"}</p>
+                        </div>
+                        <span className="pill available">success</span>
+                      </div>
+                      <div className="listing-row-meta">
+                        <div className="listing-row-meta-item">
+                          <span>Renter</span>
+                          <strong>{transaction.renter_name || "Unknown"}</strong>
+                        </div>
+                        <div className="listing-row-meta-item">
+                          <span>Reference</span>
+                          <strong>{transaction.reference}</strong>
+                        </div>
+                      </div>
+                    </div>
 
-                  <div className="listing-actions">
-                    <span className="pill available">success</span>
-                    <span>{formatDate(transaction.paid_at)}</span>
-                  </div>
-                </article>
+                    <div className="listing-row-side">
+                      <div className="listing-actions">
+                        <strong>{formatDate(transaction.paid_at)}</strong>
+                        <span className="section-meta">Payment completed</span>
+                      </div>
+                    </div>
+                  </article>
                 ))}
               </PaginatedContent>
 

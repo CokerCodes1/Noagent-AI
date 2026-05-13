@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { FiBriefcase, FiGlobe, FiMapPin, FiPhoneCall } from "react-icons/fi";
+import { FaWhatsapp } from "react-icons/fa6";
 import { toast } from "react-toastify";
 import api, { BACKEND_URL, extractErrorMessage } from "../../api/axios.js";
 
@@ -42,31 +44,49 @@ export default function TechnicianCard({ technician }) {
   return (
     <article className="card technician-card">
       <div className="technician-media">
-        {profileImage ? (
-          <img src={profileImage} alt={technician.name} />
-        ) : (
-          <div className="empty-media">No image uploaded</div>
-        )}
+        <div className="technician-media-frame">
+          {profileImage ? (
+            <img src={profileImage} alt={technician.name} />
+          ) : (
+            <div className="empty-media">No image uploaded</div>
+          )}
+        </div>
       </div>
 
-      <div className="card-content">
-        <div className="property-heading">
+      <div className="card-content technician-card-shell">
+        <div className="property-card-badge-row">
+          <span className="pill neutral">{technician.category || "Technician"}</span>
+          <span className="pill available">Available</span>
+        </div>
+
+        <div className="property-card-title-row">
           <div>
             <h3>{technician.name}</h3>
-            <p>{technician.category}</p>
+            <p className="section-meta">{technician.category}</p>
           </div>
         </div>
 
         <p className="property-description">{technician.description}</p>
-        <p className="section-meta">{technician.office_address}</p>
 
-        <div className="button-row">
+        <div className="technician-card-highlights">
+          <div className="technician-card-highlight">
+            <span>Office</span>
+            <strong>{technician.office_address || "Address not added yet"}</strong>
+          </div>
+          <div className="technician-card-highlight">
+            <span>Contact</span>
+            <strong>{technician.phone || "Phone not added yet"}</strong>
+          </div>
+        </div>
+
+        <div className="property-card-actions">
           {technician.phone ? (
             <a
               className="btn primary"
               href={`tel:${technician.phone}`}
               onClick={recordContact}
             >
+              <FiPhoneCall aria-hidden="true" />
               Call
             </a>
           ) : null}
@@ -79,6 +99,7 @@ export default function TechnicianCard({ technician }) {
               rel="noreferrer"
               onClick={recordContact}
             >
+              <FaWhatsapp aria-hidden="true" />
               WhatsApp
             </a>
           ) : null}
@@ -91,9 +112,20 @@ export default function TechnicianCard({ technician }) {
               rel="noreferrer"
               onClick={recordContact}
             >
+              <FiGlobe aria-hidden="true" />
               Website
             </a>
           ) : null}
+        </div>
+
+        <div className="property-card-contact">
+          <p className="section-meta">
+            <FiBriefcase aria-hidden="true" /> {technician.category}
+          </p>
+          <p className="section-meta">
+            <FiMapPin aria-hidden="true" />{" "}
+            {technician.office_address || "Address coming soon"}
+          </p>
         </div>
       </div>
     </article>

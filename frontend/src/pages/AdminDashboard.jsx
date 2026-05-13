@@ -10,6 +10,7 @@ import AdminSidebar from "../components/admin/AdminSidebar.jsx";
 import AdminTestimonialsSection from "../components/admin/AdminTestimonialsSection.jsx";
 import AdminUsersSection from "../components/admin/AdminUsersSection.jsx";
 import AdminLoanRequestsSection from "../components/admin/AdminLoanRequestsSection.jsx";
+import AdminLandlordVerificationsSection from "../components/admin/AdminLandlordVerificationsSection.jsx";
 import {
   adminSections,
   emptyManagedPropertyForm,
@@ -58,6 +59,7 @@ export default function AdminDashboard() {
   const [transactions, setTransactions] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
   const [loanRequests, setLoanRequests] = useState([]);
+  const [landlordVerifications, setLandlordVerifications] = useState([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
   const [propertiesLoading, setPropertiesLoading] = useState(true);
@@ -72,7 +74,12 @@ export default function AdminDashboard() {
   const [testimonialsError, setTestimonialsError] = useState("");
   const [loanRequestsLoading, setLoanRequestsLoading] = useState(true);
   const [loanRequestsError, setLoanRequestsError] = useState("");
+  const [landlordVerificationsLoading, setLandlordVerificationsLoading] =
+    useState(true);
+  const [landlordVerificationsError, setLandlordVerificationsError] =
+    useState("");
   const [deletingRequestId, setDeletingRequestId] = useState(null);
+  const [updatingVerificationId, setUpdatingVerificationId] = useState(null);
   const [managedUserForm, setManagedUserForm] = useState(emptyManagedUserForm);
   const [editingUserId, setEditingUserId] = useState(null);
   const [submittingUser, setSubmittingUser] = useState(false);
@@ -105,6 +112,7 @@ export default function AdminDashboard() {
       setRevenueLoading(true);
       setTestimonialsLoading(true);
       setLoanRequestsLoading(true);
+      setLandlordVerificationsLoading(true);
 
       const [
         overviewResult,
@@ -114,6 +122,7 @@ export default function AdminDashboard() {
         revenueResult,
         testimonialsResult,
         loanRequestsResult,
+        landlordVerificationsResult,
       ] = await Promise.allSettled([
         api.get("/admin/overview"),
         api.get("/admin/users"),
@@ -122,6 +131,7 @@ export default function AdminDashboard() {
         api.get("/admin/revenue"),
         api.get("/admin/testimonials"),
         api.get("/admin/loan-requests"),
+        api.get("/admin/landlord-verifications"),
       ]);
 
       if (!isMounted) {
@@ -190,6 +200,18 @@ export default function AdminDashboard() {
         );
       }
 
+      if (landlordVerificationsResult.status === "fulfilled") {
+        setLandlordVerifications(
+          landlordVerificationsResult.value.data.applications,
+        );
+        setLandlordVerificationsError("");
+      } else {
+        handleDashboardRequestError(
+          landlordVerificationsResult.reason,
+          setLandlordVerificationsError,
+        );
+      }
+
       setDashboardLoading(false);
       setUsersLoading(false);
       setPropertiesLoading(false);
@@ -197,6 +219,7 @@ export default function AdminDashboard() {
       setRevenueLoading(false);
       setTestimonialsLoading(false);
       setLoanRequestsLoading(false);
+      setLandlordVerificationsLoading(false);
     }
 
     loadAdminData();
@@ -574,6 +597,31 @@ export default function AdminDashboard() {
     }
   }
 
+  async function handleLandlordVerificationDecision({
+    adminNotes,
+    application,
+    verificationStatus,
+  }) {
+    setUpdatingVerificationId(application.id);
+
+    try {
+      const response = await api.patch(
+        `/admin/landlord-verifications/${application.id}`,
+        {
+          adminNotes,
+          verificationStatus,
+        },
+      );
+      toast.success(response.data.message);
+      refreshAdminData();
+    } catch (requestError) {
+      toast.error(extractErrorMessage(requestError));
+      if (requestError.response?.status === 401) clearAuthSession();
+    } finally {
+      setUpdatingVerificationId(null);
+    }
+  }
+
   const filteredUsers = managedUsers.filter((managedUser) =>
     filterRole === "all" ? true : managedUser.role === filterRole,
   );
@@ -581,7 +629,9 @@ export default function AdminDashboard() {
     propertyFilter === "all" ? true : property.status === propertyFilter,
   );
   const landlords = managedUsers.filter(
-    (managedUser) => managedUser.role === "landlord",
+    (managedUser) =>
+      managedUser.role === "landlord" &&
+      managedUser.verificationStatus === "approved",
   );
   const section = adminSections[activeSection];
   const mobileItems = navOrder.map((sectionKey) => ({
@@ -630,6 +680,16 @@ export default function AdminDashboard() {
           usersError={usersError}
           usersLoading={usersLoading}
           usersTotal={managedUsers.length}
+        />
+      ) : null}
+
+      {activeSection === "landlordVerifications" ? (
+        <AdminLandlordVerificationsSection
+          applications={landlordVerifications}
+          landlordVerificationsError={landlordVerificationsError}
+          landlordVerificationsLoading={landlordVerificationsLoading}
+          onDecision={handleLandlordVerificationDecision}
+          updatingVerificationId={updatingVerificationId}
         />
       ) : null}
 

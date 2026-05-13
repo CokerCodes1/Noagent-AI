@@ -99,12 +99,14 @@ async function handleApiRequest(request) {
     const response = await fetch(request);
 
     // Cache successful responses
-    if (response.ok && response.status === 200) {
+    // Note: avoid caching partial (206 Range) responses because Cache API cannot store them.
+    if (response && response.ok && response.status === 200) {
       const responseToCache = response.clone();
       caches.open(API_CACHE).then((cache) => {
         cache.put(request, responseToCache);
       });
     }
+
 
     return response;
   } catch (error) {
@@ -133,13 +135,15 @@ async function handleImageRequest(request) {
   try {
     const response = await fetch(request);
 
-    if (response.ok) {
+    // Avoid caching partial (206 Range) responses.
+    if (response.ok && response.status !== 206) {
       const responseToCache = response.clone();
       caches.open(IMAGE_CACHE).then((cache) => {
         cache.put(request, responseToCache);
       });
       return response;
     }
+
 
     return createPlaceholderImage();
   } catch {
@@ -160,7 +164,8 @@ async function handleVideoRequest(request) {
   try {
     const response = await fetch(request);
 
-    if (response.ok && response.headers.get('content-length')) {
+    // Avoid caching partial (206 Range) responses.
+    if (response.ok && response.status !== 206 && response.headers.get('content-length')) {
       // Only cache if we know the size (avoid huge downloads)
       const contentLength = parseInt(response.headers.get('content-length'), 10);
       if (contentLength < 50 * 1024 * 1024) { // 50MB limit
@@ -170,6 +175,7 @@ async function handleVideoRequest(request) {
         });
       }
     }
+
 
     return response;
   } catch {
@@ -185,13 +191,15 @@ async function handleDocumentRequest(request) {
   try {
     const response = await fetch(request);
 
-    if (response.ok) {
+    // Avoid caching partial (206 Range) responses.
+    if (response.ok && response.status !== 206) {
       const responseToCache = response.clone();
       caches.open(RUNTIME_CACHE).then((cache) => {
         cache.put(request, responseToCache);
       });
       return response;
     }
+
 
     // If network response is not ok, try cache
     const cachedResponse = await caches.match(request);

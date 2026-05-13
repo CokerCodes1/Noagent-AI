@@ -1,5 +1,6 @@
 import usePagination from "../../hooks/usePagination.js";
 import { formatNaira } from "../../utils/propertyListing.js";
+import EmptyStateCard from "../shared/EmptyStateCard.jsx";
 import PaginatedContent from "../shared/PaginatedContent.jsx";
 import PaginationControls from "../shared/PaginationControls.jsx";
 
@@ -103,7 +104,10 @@ export default function LandlordFinanceSection({
         </div>
 
         {records.length === 0 ? (
-          <div className="status-card">No finance records added yet.</div>
+          <EmptyStateCard
+            title="No finance records added yet"
+            description="Add rent or sale income from the form to build a cleaner running history and total income summary."
+          />
         ) : (
           <>
             <PaginatedContent
@@ -111,27 +115,49 @@ export default function LandlordFinanceSection({
               pageKey={`finance-records-${recordsPagination.currentPage}`}
             >
               {recordsPagination.pageItems.map((record) => (
-              <article key={record.id} className="listing-row compact admin-user-row">
-                <div className="listing-copy">
-                  <div className="admin-user-heading">
-                    <h3>{record.description}</h3>
-                    <span className={`pill ${record.record_type === "sale" ? "sale" : "rent"}`}>
-                      {record.record_type}
-                    </span>
-                  </div>
-                  <p>{formatNaira(record.amount)}</p>
-                  <p>{record.payment_date}</p>
-                </div>
+                <article key={record.id} className="listing-row compact admin-user-row">
+                  <div className="listing-row-content">
+                    <div className="listing-row-header">
+                      <div>
+                        <h3>{record.description}</h3>
+                        <p>{record.payment_date}</p>
+                      </div>
+                      <span className={`pill ${record.record_type === "sale" ? "sale" : "rent"}`}>
+                        {record.record_type}
+                      </span>
+                    </div>
 
-                <div className="listing-actions admin-user-actions">
-                  <button className="btn secondary" type="button" onClick={() => onEdit(record)}>
-                    Edit
-                  </button>
-                  <button className="btn danger" type="button" onClick={() => onDelete(record)}>
-                    Delete
-                  </button>
-                </div>
-              </article>
+                    <div className="listing-row-meta">
+                      <div className="listing-row-meta-item">
+                        <span>Amount</span>
+                        <strong>{formatNaira(record.amount)}</strong>
+                      </div>
+                      <div className="listing-row-meta-item">
+                        <span>Date</span>
+                        <strong>{record.payment_date}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="listing-row-side">
+                    <div className="listing-row-action-group admin-user-actions">
+                      <button
+                        className="btn secondary"
+                        type="button"
+                        onClick={() => onEdit(record)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn danger"
+                        type="button"
+                        onClick={() => onDelete(record)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </article>
               ))}
             </PaginatedContent>
 

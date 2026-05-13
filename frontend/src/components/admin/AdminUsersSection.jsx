@@ -1,6 +1,7 @@
 import PaginatedContent from "../shared/PaginatedContent.jsx";
 import PaginationControls from "../shared/PaginationControls.jsx";
 import usePagination from "../../hooks/usePagination.js";
+import EmptyStateCard from "../shared/EmptyStateCard.jsx";
 
 export default function AdminUsersSection({
   currentUserId,
@@ -151,7 +152,10 @@ export default function AdminUsersSection({
         {usersLoading ? (
           <div className="status-card">Loading users...</div>
         ) : filteredUsers.length === 0 ? (
-          <div className="status-card">No users found for this filter.</div>
+          <EmptyStateCard
+            title="No users match this role"
+            description="Change the role tabs or create a new account from the form to populate this view."
+          />
         ) : (
           <>
             <PaginatedContent
@@ -159,54 +163,68 @@ export default function AdminUsersSection({
               pageKey={`users-${usersPagination.currentPage}`}
             >
               {usersPagination.pageItems.map((managedUser) => (
-              <article key={managedUser.id} className="listing-row compact admin-user-row">
-                <div className="listing-copy">
-                  <div className="admin-user-heading">
-                    <h3>{managedUser.name}</h3>
-                    <span className="pill neutral">{managedUser.role}</span>
-                  </div>
-                  <p>{managedUser.email}</p>
-                  {managedUser.is_protected ? (
-                    <p>
-                      {managedUser.can_edit === false
-                        ? "Reserved admin account. Only the account owner can edit it."
-                        : "Reserved admin account"}
-                    </p>
-                  ) : null}
-                  <p>{managedUser.phone || "No phone added"}</p>
-                  <p>
-                    Listings: {managedUser.properties_count} | Successful unlocks:{" "}
-                    {managedUser.unlocks_count}
-                  </p>
-                </div>
+                <article key={managedUser.id} className="listing-row compact admin-user-row">
+                  <div className="listing-row-content">
+                    <div className="listing-row-header">
+                      <div>
+                        <h3>{managedUser.name}</h3>
+                        <p>{managedUser.email}</p>
+                      </div>
+                      <span className="pill neutral">{managedUser.role}</span>
+                    </div>
 
-                <div className="listing-actions admin-user-actions">
-                  <button
-                    className="btn secondary"
-                    type="button"
-                    onClick={() => handleEditUser(managedUser)}
-                    disabled={managedUser.can_edit === false}
-                  >
-                    {managedUser.can_edit === false ? "Locked" : "Edit"}
-                  </button>
-                  <button
-                    className="btn danger"
-                    type="button"
-                    onClick={() => handleDeleteUser(managedUser)}
-                    disabled={
-                      deletingUserId === managedUser.id ||
-                      currentUserId === managedUser.id ||
-                      managedUser.is_protected
-                    }
-                  >
-                    {deletingUserId === managedUser.id
-                      ? "Deleting..."
-                      : managedUser.is_protected
-                        ? "Protected"
-                        : "Delete"}
-                  </button>
-                </div>
-              </article>
+                    <div className="listing-row-meta">
+                      <div className="listing-row-meta-item">
+                        <span>Phone</span>
+                        <strong>{managedUser.phone || "No phone added"}</strong>
+                      </div>
+                      <div className="listing-row-meta-item">
+                        <span>Activity</span>
+                        <strong>
+                          {managedUser.properties_count} listings and{" "}
+                          {managedUser.unlocks_count} successful unlocks
+                        </strong>
+                      </div>
+                    </div>
+
+                    {managedUser.is_protected ? (
+                      <p className="listing-row-summary">
+                        {managedUser.can_edit === false
+                          ? "Reserved admin account. Only the account owner can edit it."
+                          : "Reserved admin account."}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="listing-row-side">
+                    <div className="listing-row-action-group admin-user-actions">
+                      <button
+                        className="btn secondary"
+                        type="button"
+                        onClick={() => handleEditUser(managedUser)}
+                        disabled={managedUser.can_edit === false}
+                      >
+                        {managedUser.can_edit === false ? "Locked" : "Edit"}
+                      </button>
+                      <button
+                        className="btn danger"
+                        type="button"
+                        onClick={() => handleDeleteUser(managedUser)}
+                        disabled={
+                          deletingUserId === managedUser.id ||
+                          currentUserId === managedUser.id ||
+                          managedUser.is_protected
+                        }
+                      >
+                        {deletingUserId === managedUser.id
+                          ? "Deleting..."
+                          : managedUser.is_protected
+                            ? "Protected"
+                            : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                </article>
               ))}
             </PaginatedContent>
 

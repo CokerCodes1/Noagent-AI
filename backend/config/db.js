@@ -50,6 +50,14 @@ async function initDatabase() {
       name VARCHAR(120) NOT NULL,
       email VARCHAR(120) NOT NULL,
       phone VARCHAR(25) NOT NULL DEFAULT '',
+      whatsapp_number VARCHAR(25) NOT NULL DEFAULT '',
+      property_address VARCHAR(255) NOT NULL DEFAULT '',
+      verification_document VARCHAR(255) NOT NULL DEFAULT '',
+      verification_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+      verification_submitted_at DATETIME NULL DEFAULT NULL,
+      verified_at DATETIME NULL DEFAULT NULL,
+      verified_by INT NULL DEFAULT NULL,
+      verification_notes TEXT NULL DEFAULT NULL,
       home_address VARCHAR(255) NOT NULL DEFAULT '',
       avatar_url VARCHAR(255) NOT NULL DEFAULT '',
       password VARCHAR(255) NOT NULL,
@@ -197,6 +205,46 @@ async function initDatabase() {
 
   await activePool.query(`
     ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(25) NOT NULL DEFAULT '' AFTER phone
+  `);
+
+  await activePool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS property_address VARCHAR(255) NOT NULL DEFAULT '' AFTER whatsapp_number
+  `);
+
+  await activePool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS verification_document VARCHAR(255) NOT NULL DEFAULT '' AFTER property_address
+  `);
+
+  await activePool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS verification_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending' AFTER verification_document
+  `);
+
+  await activePool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS verification_submitted_at DATETIME NULL DEFAULT NULL AFTER verification_status
+  `);
+
+  await activePool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS verified_at DATETIME NULL DEFAULT NULL AFTER verification_submitted_at
+  `);
+
+  await activePool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS verified_by INT NULL DEFAULT NULL AFTER verified_at
+  `);
+
+  await activePool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS verification_notes TEXT NULL DEFAULT NULL AFTER verified_by
+  `);
+
+  await activePool.query(`
+    ALTER TABLE users
     ADD COLUMN IF NOT EXISTS home_address VARCHAR(255) NOT NULL DEFAULT '' AFTER phone
   `);
 
@@ -219,9 +267,36 @@ async function initDatabase() {
     ALTER TABLE users
     MODIFY COLUMN email VARCHAR(120) NOT NULL,
     MODIFY COLUMN phone VARCHAR(25) NOT NULL DEFAULT '',
+    MODIFY COLUMN whatsapp_number VARCHAR(25) NOT NULL DEFAULT '',
+    MODIFY COLUMN property_address VARCHAR(255) NOT NULL DEFAULT '',
+    MODIFY COLUMN verification_document VARCHAR(255) NOT NULL DEFAULT '',
+    MODIFY COLUMN verification_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
     MODIFY COLUMN home_address VARCHAR(255) NOT NULL DEFAULT '',
     MODIFY COLUMN avatar_url VARCHAR(255) NOT NULL DEFAULT '',
     MODIFY COLUMN role ENUM('admin', 'landlord', 'renter', 'technician') NOT NULL DEFAULT 'renter'
+  `);
+
+  await activePool.query(`
+    UPDATE users
+    SET verification_status = 'approved',
+        verification_submitted_at = NULL,
+        verified_at = COALESCE(verified_at, created_at)
+    WHERE role = 'landlord'
+      AND (
+        verification_document = ''
+        OR verification_document IS NULL
+      )
+      AND verification_submitted_at IS NULL
+      AND verification_status = 'pending'
+  `);
+
+  await activePool.query(`
+    UPDATE users
+    SET verification_status = 'approved',
+        verification_submitted_at = NULL,
+        verified_at = COALESCE(verified_at, created_at)
+    WHERE role <> 'landlord'
+      AND verification_status <> 'approved'
   `);
 
   await activePool.query(`

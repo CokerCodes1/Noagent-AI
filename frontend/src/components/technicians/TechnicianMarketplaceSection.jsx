@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api, { extractErrorMessage } from "../../api/axios.js";
 import usePagination from "../../hooks/usePagination.js";
 import TechnicianCard from "./TechnicianCard.jsx";
+import EmptyStateCard from "../shared/EmptyStateCard.jsx";
 import PaginatedContent from "../shared/PaginatedContent.jsx";
 import PaginationControls from "../shared/PaginationControls.jsx";
 
@@ -62,7 +63,10 @@ export default function TechnicianMarketplaceSection({
       {loading ? (
         <div className="status-card">Loading technicians...</div>
       ) : technicians.length === 0 ? (
-        <div className="status-card">No technicians have completed their profiles yet.</div>
+        <EmptyStateCard
+          title="No technician profiles are live yet"
+          description="As service providers complete their profiles, they will appear here with clearer cards and responsive contact actions."
+        />
       ) : (
         <>
           <PaginatedContent

@@ -106,9 +106,7 @@ function AppFrame() {
     toast.info(
       <div className="pwa-update-toast">
         <strong>App update ready</strong>
-        <span>
-          A newer NoAgentNaija build is available with fresh cached assets.
-        </span>
+        <span>A newer NoAgentNaija build is available.</span>
         <button
           className="btn primary"
           type="button"

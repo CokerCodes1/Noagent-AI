@@ -1,5 +1,6 @@
 import { BACKEND_URL } from "../../api/axios.js";
 import usePagination from "../../hooks/usePagination.js";
+import EmptyStateCard from "../shared/EmptyStateCard.jsx";
 import PaginatedContent from "../shared/PaginatedContent.jsx";
 import PaginationControls from "../shared/PaginationControls.jsx";
 import TechnicianProfileFields from "../technicians/TechnicianProfileFields.jsx";
@@ -131,7 +132,10 @@ export default function AdminTechniciansSection({
         {techniciansLoading ? (
           <div className="status-card">Loading technicians...</div>
         ) : filteredTechnicians.length === 0 ? (
-          <div className="status-card">No technicians found for this filter.</div>
+          <EmptyStateCard
+            title="No technicians match this category"
+            description="Switch the category filter or create a technician profile from the form to populate this directory."
+          />
         ) : (
           <>
             <PaginatedContent
@@ -143,42 +147,73 @@ export default function AdminTechniciansSection({
 
               return (
                 <article key={technician.id} className="listing-row technician-admin-row">
-                  {imageUrl ? (
-                    <img src={imageUrl} alt={technician.name} />
-                  ) : (
-                    <div className="empty-media admin-listing-empty">No image</div>
-                  )}
-
-                  <div className="listing-copy">
-                    <div className="admin-user-heading">
-                      <h3>{technician.name}</h3>
-                      <span className="pill neutral">{technician.category || "Uncategorized"}</span>
-                    </div>
-                    <p>{technician.email || "No email"}</p>
-                    <p>{technician.phone || "No phone"}</p>
-                    <p>{technician.office_address || "No office address"}</p>
-                    <p>{technician.description || "No description added yet."}</p>
+                  <div className="listing-row-media">
+                    {imageUrl ? (
+                      <img src={imageUrl} alt={technician.name} />
+                    ) : (
+                      <div className="empty-media admin-listing-empty">No image</div>
+                    )}
                   </div>
 
-                  <div className="listing-actions">
-                    <strong>{technician.total_contacts} contacts</strong>
-                    <span>{technician.jobs_completed} jobs delivered</span>
-                    <span>N{Number(technician.total_earnings || 0).toLocaleString()}</span>
-                    <button
-                      className="btn secondary"
-                      type="button"
-                      onClick={() => handleEditTechnician(technician)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn danger"
-                      type="button"
-                      onClick={() => handleDeleteTechnician(technician)}
-                      disabled={deletingTechnicianId === technician.id}
-                    >
-                      {deletingTechnicianId === technician.id ? "Deleting..." : "Delete"}
-                    </button>
+                  <div className="listing-row-content">
+                    <div className="listing-row-header">
+                      <div>
+                        <h3>{technician.name}</h3>
+                        <p>{technician.email || "No email"}</p>
+                      </div>
+                      <span className="pill neutral">
+                        {technician.category || "Uncategorized"}
+                      </span>
+                    </div>
+
+                    <div className="listing-row-meta">
+                      <div className="listing-row-meta-item">
+                        <span>Phone</span>
+                        <strong>{technician.phone || "No phone"}</strong>
+                      </div>
+                      <div className="listing-row-meta-item">
+                        <span>Office</span>
+                        <strong>{technician.office_address || "No office address"}</strong>
+                      </div>
+                      <div className="listing-row-meta-item">
+                        <span>Contacts</span>
+                        <strong>{technician.total_contacts} contacts</strong>
+                      </div>
+                      <div className="listing-row-meta-item">
+                        <span>Earnings</span>
+                        <strong>
+                          N{Number(technician.total_earnings || 0).toLocaleString()}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <p className="listing-row-summary">
+                      {technician.description || "No description added yet."}
+                    </p>
+                  </div>
+
+                  <div className="listing-row-side">
+                    <div className="listing-actions">
+                      <strong>{technician.jobs_completed} jobs delivered</strong>
+                      <span className="section-meta">Public marketplace profile</span>
+                    </div>
+                    <div className="listing-row-action-group">
+                      <button
+                        className="btn secondary"
+                        type="button"
+                        onClick={() => handleEditTechnician(technician)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn danger"
+                        type="button"
+                        onClick={() => handleDeleteTechnician(technician)}
+                        disabled={deletingTechnicianId === technician.id}
+                      >
+                        {deletingTechnicianId === technician.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
                   </div>
                 </article>
               );

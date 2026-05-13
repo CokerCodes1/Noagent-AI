@@ -50,6 +50,12 @@ export default function AdminSidebar({ overview }) {
           <FiBarChart2 />
           <span>{overview.stats.successfulTransactions} payments</span>
         </div>
+        <div className="admin-sidebar-pill">
+          <FiBarChart2 />
+          <span>
+            {overview.stats.pendingLandlordVerifications || 0} landlord reviews
+          </span>
+        </div>
       </div>
     </aside>
   );

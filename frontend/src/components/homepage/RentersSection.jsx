@@ -9,23 +9,27 @@ const benefits = [
   {
     icon: FiHome,
     title: "Direct property access",
-    description: "Browse homes from landlords without added agent commission pressure."
+    description:
+      "Rent and buy properties from verified landlords/owners without agent commission and pressure.",
   },
   {
     icon: FiShield,
     title: "Cleaner trust signals",
-    description: "Reduce guesswork with a platform built around direct communication and verified actions."
+    description:
+      "Reduce guesswork with a platform built around direct communication and verified actions.",
   },
   {
     icon: FiMapPin,
     title: "Search with clarity",
-    description: "Move from discovery to a real conversation faster when listing intent is obvious."
+    description:
+      "Move from discovery to a real conversation faster when listing intent is obvious.",
   },
   {
     icon: FiClock,
     title: "Less wasted time",
-    description: "Skip the loops, delays, and unnecessary negotiation layers that slow renters down."
-  }
+    description:
+      "Skip the loops, delays, and unnecessary negotiation layers that slow renters down.",
+  },
 ];
 
 export default function RentersSection() {
@@ -36,11 +40,17 @@ export default function RentersSection() {
       <div className="homepage-container homepage-split-section">
         <Reveal className="homepage-media-stack">
           <div className="homepage-media-card">
-            <img src={HOMEPAGE_MEDIA.rentersImage} alt="Interior property view for renters" loading="lazy" />
+            <img
+              src={HOMEPAGE_MEDIA.rentersImage}
+              alt="Interior property view for renters"
+              loading="lazy"
+            />
           </div>
           <div className="homepage-floating-metric">
-            <strong>Find Homes Without Agents</strong>
-            <span>Cleaner discovery. Direct contact. More control.</span>
+            <strong>Find Homes Without Agents and Their Costly Fees</strong>
+            <span>
+              Verified Listings. Direct Landlord contact. More control.
+            </span>
           </div>
         </Reveal>
 
@@ -58,16 +68,24 @@ export default function RentersSection() {
             Find Homes Without Agents
           </Motion.h2>
           <Motion.p className="homepage-section-copy" variants={fadeInUp}>
-            Renters should be able to see, compare, and connect without paying extra just to start the conversation.
-            NoAgentNaija puts the direct path back in your hands.
+            Renters should be able to see, compare, and connect without paying
+            extra just to start the conversation. NoAgentNaija puts the direct
+            path back in your hands.
           </Motion.p>
 
-          <Motion.div className="homepage-feature-list" variants={staggerChildren}>
+          <Motion.div
+            className="homepage-feature-list"
+            variants={staggerChildren}
+          >
             {benefits.map((benefit) => {
               const Icon = benefit.icon;
 
               return (
-                <Motion.article key={benefit.title} className="homepage-feature-card" variants={fadeInUp}>
+                <Motion.article
+                  key={benefit.title}
+                  className="homepage-feature-card"
+                  variants={fadeInUp}
+                >
                   <span className="homepage-feature-icon">
                     <Icon />
                   </span>
@@ -81,7 +99,11 @@ export default function RentersSection() {
           </Motion.div>
 
           <Motion.div variants={fadeInUp}>
-            <button type="button" className="btn primary" onClick={() => navigate("/auth?mode=signup")}>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => navigate("/auth?mode=signup")}
+            >
               Find a Home
             </button>
           </Motion.div>

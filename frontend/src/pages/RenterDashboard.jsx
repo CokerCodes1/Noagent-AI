@@ -20,6 +20,7 @@ import WorkspaceSidebar from "../components/workspace/WorkspaceSidebar.jsx";
 import usePagination from "../hooks/usePagination.js";
 import useIsPhoneViewport from "../hooks/useIsPhoneViewport.js";
 import PwaSettings from "../components/settings/PwaSettings.jsx";
+import EmptyStateCard from "../components/shared/EmptyStateCard.jsx";
 import { clearAuthSession, getStoredUser } from "../utils/session.js";
 
 function applyFilters(properties, filters) {
@@ -149,9 +150,10 @@ export default function RenterDashboard() {
                 ))}
               </div>
             ) : filteredProperties.length === 0 ? (
-              <div className="status-card">
-                No properties matched your current filters.
-              </div>
+              <EmptyStateCard
+                title="No properties matched your filters"
+                description="Try widening your location, type, or price range to reveal more listings."
+              />
             ) : (
               <>
                 <PaginatedContent
